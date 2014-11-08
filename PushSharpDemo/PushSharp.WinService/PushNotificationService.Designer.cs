@@ -1,6 +1,6 @@
 ﻿namespace PushSharp.WinService
 {
-    partial class Service1
+    partial class PushNotificationService
     {
         /// <summary> 
         /// Required designer variable.

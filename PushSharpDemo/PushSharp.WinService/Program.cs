@@ -17,7 +17,7 @@ namespace PushSharp.WinService
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[] 
             { 
-                new Service1() 
+                new PushNotificationService() 
             };
             ServiceBase.Run(ServicesToRun);
         }

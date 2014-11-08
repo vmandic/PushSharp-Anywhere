@@ -42,11 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Service1.cs">
+    <Compile Include="PushNotificationService.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Service1.Designer.cs">
-      <DependentUpon>Service1.cs</DependentUpon>
+    <Compile Include="PushNotificationService.Designer.cs">
+      <DependentUpon>PushNotificationService.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -55,9 +55,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PushSharp.Core\PushSharp.Core.csproj">
+    <ProjectReference Include="..\PushSharp.Core\PushSharp.CoreProcessor.csproj">
       <Project>{8a6d0b4d-825e-41b9-9251-6e940f9a685f}</Project>
-      <Name>PushSharp.Core</Name>
+      <Name>PushSharp.CoreProcessor</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

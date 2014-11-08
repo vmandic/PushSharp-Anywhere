@@ -1,4 +1,4 @@
-﻿namespace PushSharp.Core.Utility
+﻿namespace PushSharp.CoreProcessor.Utility
 {
     internal enum PushNotificationStatus
     {

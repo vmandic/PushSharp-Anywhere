@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PushSharp.CoreProcessor;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -10,19 +11,24 @@ using System.Threading.Tasks;
 
 namespace PushSharp.WinService
 {
-    public partial class Service1 : ServiceBase
+    public partial class PushNotificationService : ServiceBase
     {
-        public Service1()
+        private PushNotificationProcessor _processor;
+
+        public PushNotificationService()
         {
             InitializeComponent();
+            this._processor = new PushNotificationProcessor();
         }
 
         protected override void OnStart(string[] args)
         {
+            this._processor.Start();
         }
 
         protected override void OnStop()
         {
+            this._processor.Stop();
         }
     }
 }

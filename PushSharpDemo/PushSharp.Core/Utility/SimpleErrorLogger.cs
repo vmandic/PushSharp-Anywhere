@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace PushSharp.Core.Utility
+namespace PushSharp.CoreProcessor.Utility
 {
     public class SimpleErrorLogger
     {
