@@ -10,7 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{DFFAEA
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PushSharp.CoreProcessor", "PushSharp.Core\PushSharp.CoreProcessor.csproj", "{8A6D0B4D-825E-41B9-9251-6E940F9A685F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PushSharp.CoreProcessor", "PushSharp.CoreProcessor\PushSharp.CoreProcessor.csproj", "{8A6D0B4D-825E-41B9-9251-6E940F9A685F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PushSharp.WinFormsNotifier", "PushSharp.WinFormsNotifier\PushSharp.WinFormsNotifier.csproj", "{C6DBC535-9A08-44AA-B783-9CF701925A16}"
 EndProject

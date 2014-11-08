@@ -99,7 +99,7 @@
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PushSharp.Core\PushSharp.CoreProcessor.csproj">
+    <ProjectReference Include="..\PushSharp.CoreProcessor\PushSharp.CoreProcessor.csproj">
       <Project>{8a6d0b4d-825e-41b9-9251-6e940f9a685f}</Project>
       <Name>PushSharp.CoreProcessor</Name>
     </ProjectReference>
