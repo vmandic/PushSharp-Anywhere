@@ -5,7 +5,7 @@ namespace PushSharp.DataAccessLayer
     public partial class PushSharpDatabaseContext : DbContext
     {
         public PushSharpDatabaseContext()
-            : base("name=DBModel")
+            : base("name=dbcs")
         {
         }
 
