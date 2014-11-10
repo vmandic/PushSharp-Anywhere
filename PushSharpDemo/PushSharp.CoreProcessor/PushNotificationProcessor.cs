@@ -106,15 +106,18 @@ namespace PushSharp.CoreProcessor
             On(DisplayStatusMessage, "Idle.");
         }
 
-        public bool ProcessNotification(PushSharpDatabaseContext ctx, bool disposeContext = false)
+        public bool ProcessNotification(PushSharpDatabaseContext ctx, bool disposeContext = false, PushNotification pushNotification = null)
         {
             On(DisplayMessage, "Checking for unprocessed notifications...");
 
-            PushNotification notificationEntity = null;
+            PushNotification notificationEntity = pushNotification;
 
             try
             {
-                notificationEntity = ctx.PushNotification.FirstOrDefault(s =>
+                if (notificationEntity != null)
+                    ctx.PushNotification.Add(pushNotification);
+                else
+                    notificationEntity = ctx.PushNotification.FirstOrDefault(s =>
                                     s.Status == (int)PushNotificationStatus.Unprocessed &&
                                     s.CreatedAt <= DateTime.Now);
             }
@@ -144,7 +147,7 @@ namespace PushSharp.CoreProcessor
 
                     notificationEntity.Status = (int)PushNotificationStatus.Processing;
                     notificationEntity.ModifiedAt = DateTime.Now;
-                    notificationEntity.Description = "(Processor) Notification queued for sending..";
+                    notificationEntity.Description = "(Processor) Notification queued for sending.";
                 }
                 ////-------------------------
                 //// APPLE iOS NOTIFICATIONS

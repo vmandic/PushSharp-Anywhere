@@ -1,6 +1,6 @@
 ﻿namespace PushSharp.CoreProcessor.Utility
 {
-    internal enum PushNotificationStatus
+    public enum PushNotificationStatus
     {
         Unprocessed = 0,
         Processing = 100,
