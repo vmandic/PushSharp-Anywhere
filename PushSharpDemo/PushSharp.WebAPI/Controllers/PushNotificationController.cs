@@ -13,8 +13,6 @@ namespace PushSharp.WebAPI.Controllers
     [RoutePrefix("notification")]
     public class PushNotificationController : BaseApiController
     {
-        private readonly string[] validDevices = new[] { "ios", "android", "wp8" };
-
         [HttpGet]
         [Route("new/{mdid:int:min(1)}/{m}/{direct:bool}")]
         public string New(int mdid, string m, bool direct = true)
@@ -62,7 +60,7 @@ namespace PushSharp.WebAPI.Controllers
                 if (String.Equals(rid.Trim(), "") || String.Equals(md.Trim(), "") || cid <= 0)
                     throw new Exception("Required parameters are invalid!");
 
-                if (!validDevices.Contains(md))
+                if (!_validDevices.Contains(md))
                     throw new Exception("You're pushing a message for an invalid mobile devices OS! Valid OS are: ios, android and wp8.");
 
                 var mobileDevice = new MobileDevice()
