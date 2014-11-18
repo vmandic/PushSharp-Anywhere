@@ -9,4 +9,4 @@ The repo is also planned to have 3 (iOS, Android and WP8) client implementations
 
 Disclaimer
 ===============
-This demo project was built for a show case on the mscommunity.hr standup/meetup in Zagreb held at 25.11.2014.
+This demo project was built for a show case on the mscommunity.hr standup/meetup in Zagreb held at 25.11.2014. No coded tests were performed, bugs are possible, please contribute and fork on!
