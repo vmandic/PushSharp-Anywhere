@@ -9,12 +9,12 @@ namespace PushSharp.WebAPI.Controllers
         protected readonly string[] _validDevices = new[] { "ios", "android", "wp8" };
 
         public PushNotificationProcessor Processor { get; set; }
-        public PushSharpDatabaseContext Context { get; set; }
+        public PushSharpDatabaseContext DatabaseContext { get; set; }
 
         public BaseApiController()
         {
             this.Processor = new PushNotificationProcessor();
-            this.Context = new PushSharpDatabaseContext();
+            this.DatabaseContext = new PushSharpDatabaseContext();
         }
     }
 }

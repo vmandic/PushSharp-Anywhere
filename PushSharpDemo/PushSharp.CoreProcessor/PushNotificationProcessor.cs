@@ -15,12 +15,13 @@ namespace PushSharp.CoreProcessor
     public class PushNotificationProcessor
     {
         // Fields
-        private PushSharpDatabaseContext _dbContext;
+        private PushSharpDatabaseContext _databaseContext;
         private Thread _processorThread;
         private bool _processorThreadRunning = false;
         private PushBroker _broker;
         private readonly string _googlePushNotificationAuthToken;
         private readonly byte[] _applePushNotificationCertificate;
+        //no certs/keys for windows phone 8
 
         // Events
         public delegate void MessageHandler(object sender, string message);
@@ -36,11 +37,17 @@ namespace PushSharp.CoreProcessor
         // Constructor
         public PushNotificationProcessor(string appStartupPath = "")
         {
+            // REQUIRED PLATFORM AUTHORIZATION TOKENS: 
+            // register for those at: https://developer.apple.com/ and https://developers.google.com/
+
             _googlePushNotificationAuthToken = "";//"AIzaSyAhEKqp1ahCYQN7NB-PzQSB3G655xtyZEg";
             _applePushNotificationCertificate = new byte[] { };//File.ReadAllBytes("/Certificates/Apple-PushNotifications-DevCert.p12");
+        }
 
+        private void InitBroker()
+        {
             _broker = new PushBroker();
-            _dbContext = new PushSharpDatabaseContext();
+            _databaseContext = new PushSharpDatabaseContext();
 
             // subscribe to the push brokers API events
             _broker.OnNotificationSent += broker_OnNotificationSent;
@@ -56,20 +63,57 @@ namespace PushSharp.CoreProcessor
             _broker.RegisterGcmService(new GcmPushChannelSettings(_googlePushNotificationAuthToken));
             //_broker.RegisterAppleService(new ApplePushChannelSettings(false, _applePushNotificationCertificate, "Password"));
             _broker.RegisterWindowsPhoneService();
+
+            On(DisplayMessage, "Push Broker successfully initialized.");
+        }
+
+        private void KillBroker(PushSharpDatabaseContext dbContext)
+        {
+            _broker.StopAllServices();
+
+            // unsubscribe from the API events
+            _broker.OnNotificationSent -= broker_OnNotificationSent;
+            _broker.OnNotificationFailed -= broker_OnNotificationFailed;
+            _broker.OnServiceException -= broker_OnServiceException;
+            _broker.OnNotificationRequeue -= broker_OnNotificationRequeue;
+            _broker.OnDeviceSubscriptionExpired -= broker_OnDeviceSubscriptionExpired;
+            _broker.OnDeviceSubscriptionChanged -= broker_OnDeviceSubscriptionChanged;
+            _broker.OnChannelCreated -= broker_OnChannelCreated;
+            _broker.OnChannelDestroyed -= broker_OnChannelDestroyed;
+            _broker.OnChannelException -= broker_OnChannelException;
+
+            DisposeContext(dbContext, true);
+
+            On(DisplayMessage, "Push Broker successfully stopped.");
         }
 
         public void Start()
         {
-            On(DisplayMessage, "Notification processor starting...");
-            _processorThread = new Thread(ProcessNotificationsLoop);
-            _processorThread.Start();
-            _processorThreadRunning = true;
+            if (!_processorThreadRunning)
+            {
+                On(DisplayMessage, "Notification processor starting...");
+
+                InitBroker();
+
+                _processorThread = new Thread(ProcessNotificationsLoop);
+                _processorThread.Start();
+                _processorThreadRunning = true;
+            }
+            else
+                On(DisplayErrorMessage, "Can not start processor! Processor already running.");
         }
 
         public void Stop()
         {
-            _processorThreadRunning = false;
-            On(DisplayMessage, "Notification processor stopping...");
+            if (_processorThreadRunning)
+            {
+                _processorThreadRunning = false;
+
+                KillBroker(_databaseContext);
+                On(DisplayMessage, "Notification processor stopping...");
+            }
+            else
+                On(DisplayErrorMessage, "Can not stop processor! Processor already stopped.");
         }
 
         private void ProcessNotificationsLoop()
@@ -79,7 +123,7 @@ namespace PushSharp.CoreProcessor
             // run a continuos loop for checking the database and its PushNotification entity
             while (_processorThreadRunning)
             {
-                if (!ProcessNotification(_dbContext))
+                if (!ProcessNotification(_databaseContext))
                 {
                     On(DisplayStatusMessage, "No queued messages found, sleeping...");
                     // give it a rest, it's not that big of a rush...
@@ -87,37 +131,24 @@ namespace PushSharp.CoreProcessor
                 }
             }
 
-            _broker.StopAllServices();
-
-            // unsubscribe from the API events
-            //_broker.OnNotificationSent -= broker_OnNotificationSent;
-            //_broker.OnNotificationFailed -= broker_OnNotificationFailed;
-            //_broker.OnServiceException -= broker_OnServiceException;
-            //_broker.OnNotificationRequeue -= broker_OnNotificationRequeue;
-            //_broker.OnDeviceSubscriptionExpired -= broker_OnDeviceSubscriptionExpired;
-            //_broker.OnDeviceSubscriptionChanged -= broker_OnDeviceSubscriptionChanged;
-            //_broker.OnChannelCreated -= broker_OnChannelCreated;
-            //_broker.OnChannelDestroyed -= broker_OnChannelDestroyed;
-            //_broker.OnChannelException -= broker_OnChannelException;
-
-            DisposeContext(_dbContext, true);
-
             On(DisplayMessage, "Notification processor thread stopped.");
             On(DisplayStatusMessage, "Idle.");
         }
 
-        public bool ProcessNotification(PushSharpDatabaseContext ctx, bool disposeContext = false, PushNotification pushNotification = null)
+        public bool ProcessNotification(PushSharpDatabaseContext databaseContext, bool isDirectPush = false, PushNotification pushNotification = null)
         {
-            On(DisplayMessage, "Checking for unprocessed notifications...");
+            if (isDirectPush)
+                InitBroker();
 
+            On(DisplayMessage, "Checking for unprocessed notifications...");
             PushNotification notificationEntity = pushNotification;
 
             try
             {
                 if (notificationEntity != null)
-                    ctx.PushNotification.Add(pushNotification);
+                    databaseContext.PushNotification.Add(pushNotification);
                 else
-                    notificationEntity = ctx.PushNotification.FirstOrDefault(s =>
+                    notificationEntity = databaseContext.PushNotification.FirstOrDefault(s =>
                                     s.Status == (int)PushNotificationStatus.Unprocessed &&
                                     s.CreatedAt <= DateTime.Now);
             }
@@ -144,10 +175,7 @@ namespace PushSharp.CoreProcessor
                             .WithJson(msg);
 
                     _broker.QueueNotification(gcmNotif);
-
-                    notificationEntity.Status = (int)PushNotificationStatus.Processing;
-                    notificationEntity.ModifiedAt = DateTime.Now;
-                    notificationEntity.Description = "(Processor) Notification queued for sending.";
+                    UpdateNotificationQueued(notificationEntity);
                 }
                 ////-------------------------
                 //// APPLE iOS NOTIFICATIONS
@@ -162,23 +190,24 @@ namespace PushSharp.CoreProcessor
                                 .WithSound("default");
 
                     _broker.QueueNotification(appleNotif);
-
-                    notificationEntity.Status = (int)PushNotificationStatus.Processing;
-                    notificationEntity.ModifiedAt = DateTime.Now;
-                    notificationEntity.Description = "(Processor) Notification queued for sending.";
+                    UpdateNotificationQueued(notificationEntity);
                 }
-                //-----------------------------
+                //------------------------------
                 // WINDOWS PHONE 8 NOTIFICATIONS
-                //-----------------------------
+                //------------------------------
                 else if (notificationEntity.MobileDevice.SmartphonePlatform == "wp8")
                 {
                     var wpNotif = new WindowsPhoneToastNotification() { Tag = notificationEntity.ID };
+
                     wpNotif.ForEndpointUri(new Uri(notificationEntity.MobileDevice.PushNotificationsRegistrationID))
                         .ForOSVersion(WindowsPhoneDeviceOSVersion.Eight)
                         .WithBatchingInterval(BatchingInterval.Immediate)
                         .WithNavigatePath("/MainPage.xaml")
                         .WithText1("PushSharpDemo")
                         .WithText2(notificationEntity.Message);
+
+                    _broker.QueueNotification(wpNotif);
+                    UpdateNotificationQueued(notificationEntity);
                 }
                 else
                 {
@@ -191,7 +220,8 @@ namespace PushSharp.CoreProcessor
 
                 try
                 {
-                    _dbContext.SaveChanges();
+                    // Save changes to DB to keep the correct state of messages
+                    databaseContext.SaveChanges();
                     return true;
                 }
                 catch (Exception ex)
@@ -202,15 +232,25 @@ namespace PushSharp.CoreProcessor
                 }
                 finally
                 {
-                    DisposeContext(ctx, disposeContext);
+                    if (isDirectPush)
+                        KillBroker(databaseContext);
                 }
             }
             else
             {
-                DisposeContext(ctx, disposeContext);
+                if (isDirectPush)
+                    KillBroker(databaseContext);
+
                 // no messages were queued, take a nap...
                 return false;
             }
+        }
+
+        private static void UpdateNotificationQueued(PushNotification notificationEntity)
+        {
+            notificationEntity.Status = (int)PushNotificationStatus.Processing;
+            notificationEntity.ModifiedAt = DateTime.Now;
+            notificationEntity.Description = "(Processor) Notification queued for sending.";
         }
 
         private void DisposeContext(PushSharpDatabaseContext ctx, bool disposeContext)
@@ -218,10 +258,54 @@ namespace PushSharp.CoreProcessor
             if (disposeContext)
             {
                 ctx.Dispose();
-                On(DisplayMessage, "Database context disposed.");
+                On(DisplayMessage, "Database context sucessfully disposed.");
             }
         }
 
+        private void broker_OnNotificationSent(object sender, INotification notification)
+        {
+            try
+            {
+                int ID = Convert.ToInt32(notification.Tag);
+
+                var notif = _databaseContext.PushNotification.FirstOrDefault(s => s.ID == ID);
+                if (notif != null)
+                {
+                    On(DisplayMessage, "ID " + notif.ID + " sent.");
+
+                    notif.Description = "(Processor) Notification sent.";
+                    notif.Status = (int)PushNotificationStatus.Processed;
+
+                    _databaseContext.SaveChanges();
+                }
+                else
+                {
+                    On(DisplayErrorMessage, "ERROR: Notification " + notif.ID + " not found in database");
+                }
+            }
+            catch (Exception ex)
+            {
+                On(DisplayErrorMessage, "EX. ERROR: Get notification from DB: " + ex.Message);
+                Error.Log(ex);
+            }
+        }
+
+        private void broker_OnDeviceSubscriptionExpired(object sender, string expiredSubscriptionId, DateTime expirationDateUtc, INotification notification)
+        {
+            On(DisplayErrorMessage, "Push Notification service subscription expired!");
+        }
+
+        private void broker_OnServiceException(object sender, Exception error)
+        {
+            On(DisplayErrorMessage, "Push Notification service failure!");
+        }
+
+        private void broker_OnNotificationFailed(object sender, INotification notification, Exception error)
+        {
+            On(DisplayErrorMessage, "Notification failed!");
+        }
+
+        #region Not broker implemented handlers
         private void broker_OnChannelException(object sender, IPushChannel pushChannel, Exception error)
         {
             throw new NotImplementedException();
@@ -242,52 +326,10 @@ namespace PushSharp.CoreProcessor
             throw new NotImplementedException();
         }
 
-        private void broker_OnDeviceSubscriptionExpired(object sender, string expiredSubscriptionId, DateTime expirationDateUtc, INotification notification)
-        {
-            throw new NotImplementedException();
-        }
-
         private void broker_OnNotificationRequeue(object sender, NotificationRequeueEventArgs e)
         {
             throw new NotImplementedException();
         }
-
-        private void broker_OnServiceException(object sender, Exception error)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void broker_OnNotificationFailed(object sender, INotification notification, Exception error)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void broker_OnNotificationSent(object sender, INotification notification)
-        {
-            try
-            {
-                int ID = Convert.ToInt32(notification.Tag);
-
-                var notif = _dbContext.PushNotification.FirstOrDefault(s => s.ID == ID);
-                if (notif != null)
-                {
-                    On(DisplayMessage, "ID " + notif.ID + " sent.");
-
-                    notif.Description = "(Processor) Notification sent.";
-                    notif.Status = (int)PushNotificationStatus.Processed;
-
-                    _dbContext.SaveChanges();
-                }
-                else
-                {
-                    On(DisplayErrorMessage, "ERROR: Notification " + notif.ID + " not found in database");
-                }
-            }
-            catch (Exception ex)
-            {
-                On(DisplayErrorMessage, "EX. ERROR: Get notification from DB: " + ex.Message);
-                Error.Log(ex);
-            }
-        }
+        #endregion
     }
 }

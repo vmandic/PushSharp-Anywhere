@@ -1,26 +1,29 @@
 ﻿using PushSharp.CoreProcessor.Utility;
 using PushSharp.DataAccessLayer;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
-using System.Data.Entity;
 
 namespace PushSharp.WebAPI.Controllers
 {
     [RoutePrefix("notification")]
     public class PushNotificationController : BaseApiController
     {
+        /// <summary>
+        /// Pushes a new message to the push notification subscribers.
+        /// </summary>
+        /// <param name="mdid" type="int">Mobile Device ID.</param>
+        /// <param name="m" type="string">Mesage text.</param>
+        /// <param name="direct" type="bool">Decides wethere the message will be queued in the database or pushed directly, pushes directly if true, else queues to the DB.</param>
+        /// <returns>A string information about the sent push message.</returns>
         [HttpGet]
         [Route("new/{mdid:int:min(1)}/{m}/{direct:bool}")]
         public string New(int mdid, string m, bool direct = true)
         {
             try
             {
-                if (String.IsNullOrEmpty(m) || m.Length <= 5)
-                    throw new Exception("Message is too short! A message must have more then 5 characters.");
+                if (String.IsNullOrEmpty(m) || m.Length <= 5 || m.Length > 60)
+                    throw new Exception("The message must be between 5 and 60 characters!");
 
                 var pushNotification = new PushNotification()
                 {
@@ -34,13 +37,16 @@ namespace PushSharp.WebAPI.Controllers
 
                 if (direct)
                 {
-                    if (!Processor.ProcessNotification(Context, true, pushNotification))
+                    // if true, the message will get processed and saved to the DB, dbctx will be disposed
+                    if (!Processor.ProcessNotification(DatabaseContext, true, pushNotification))
                         throw new Exception("Error on direct push of the notification!");
                 }
                 else
                 {
-                    Context.PushNotification.Add(pushNotification);
-                    Context.SaveChanges();
+                    // queue for push, processor will handle
+                    DatabaseContext.PushNotification.Add(pushNotification);
+                    DatabaseContext.SaveChanges();
+                    DatabaseContext.Dispose();
                 }
 
                 return "Message successfully pushed at: " + DateTime.Now.ToString();
@@ -51,16 +57,24 @@ namespace PushSharp.WebAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Subscribes the mobile device for push notifications.
+        /// </summary>
+        /// <param name="cid">Client ID.</param>
+        /// <param name="rid">Registration string ID.</param>
+        /// <param name="mdos">Mobile device operating system. The valids are "ios", "android" and "wp8".</param>
+        /// <param name="did">Mobiledevice string ID.</param>
+        /// <returns>A message informing about the device registration status.</returns>
         [HttpGet]
-        [Route("device/register/{cid:int:min(1)/{rid}/{md}/{did}")]
-        public string RegisterDevice(int cid, string rid, string md, string did)
+        [Route("device/register/{cid:int:min(1)/{rid}/{mdos}/{did}")]
+        public string RegisterDevice(int cid, string rid, string mdos, string did)
         {
             try
             {
-                if (String.Equals(rid.Trim(), "") || String.Equals(md.Trim(), "") || cid <= 0)
+                if (String.Equals(rid.Trim(), "") || String.Equals(mdos.Trim(), "") || cid <= 0)
                     throw new Exception("Required parameters are invalid!");
 
-                if (!_validDevices.Contains(md))
+                if (!_validDevices.Contains(mdos))
                     throw new Exception("You're pushing a message for an invalid mobile devices OS! Valid OS are: ios, android and wp8.");
 
                 var mobileDevice = new MobileDevice()
@@ -71,11 +85,12 @@ namespace PushSharp.WebAPI.Controllers
                     DeviceID = did,
                     ModifiedAt = DateTime.Now,
                     PushNotificationsRegistrationID = rid,
-                    SmartphonePlatform = md
+                    SmartphonePlatform = mdos
                 };
 
-                Context.MobileDevice.Add(mobileDevice);
-                Context.SaveChanges();
+                DatabaseContext.MobileDevice.Add(mobileDevice);
+                DatabaseContext.SaveChanges();
+                DatabaseContext.Dispose();
 
                 return "Device registered successfully at: " + DateTime.Now.ToString();
             }

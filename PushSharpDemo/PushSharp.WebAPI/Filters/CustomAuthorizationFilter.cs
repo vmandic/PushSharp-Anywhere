@@ -1,10 +1,10 @@
-﻿using System;
+﻿using PushSharp.CoreProcessor.Utility;
+using PushSharp.WebAPI.Utility;
+using System;
 using System.Net.Http;
 using System.Text;
 using System.Web.Http;
 using System.Web.Http.Controllers;
-using PushSharp.WebAPI.Utility;
-using PushSharp.CoreProcessor.Utility;
 
 namespace PushSharp.WebAPI.Filters
 {
