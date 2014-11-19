@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PushSharp.WP8", "PushSharp.WP8\PushSharp.WP8.csproj", "{239FBA05-74F3-4AD6-B207-55FE41DB447A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PushSharp.WindowsPhoneClient", "PushSharp.WindowsPhoneClient\PushSharp.WindowsPhoneClient.csproj", "{239FBA05-74F3-4AD6-B207-55FE41DB447A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

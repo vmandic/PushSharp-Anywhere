@@ -18,7 +18,7 @@ using Windows.UI.Xaml.Navigation;
 
 // The Blank Application template is documented at http://go.microsoft.com/fwlink/?LinkId=391641
 
-namespace PushSharp.WP8
+namespace PushSharp.WindowsPhoneClient
 {
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
