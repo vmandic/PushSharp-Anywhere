@@ -12,9 +12,9 @@ namespace PushSharp.WebAPI.Controllers
         /// <summary>
         /// Pushes a new message to the push notification subscribers.
         /// </summary>
-        /// <param name="mdid" type="int">Mobile Device ID.</param>
-        /// <param name="m" type="string">Mesage text.</param>
-        /// <param name="direct" type="bool">Decides wethere the message will be queued in the database or pushed directly, pushes directly if true, else queues to the DB.</param>
+        /// <param name="mdid">Mobile Device ID.</param>
+        /// <param name="m">Mesage text.</param>
+        /// <param name="direct">Decides wethere the message will be queued in the database or pushed directly, pushes directly if true, else queues to the DB.</param>
         /// <returns>A string information about the sent push message.</returns>
         [HttpGet]
         [Route("new/{mdid:int:min(1)}/{m}/{direct:bool}")]
@@ -63,7 +63,7 @@ namespace PushSharp.WebAPI.Controllers
         /// <param name="cid">Client ID.</param>
         /// <param name="rid">Registration string ID.</param>
         /// <param name="mdos">Mobile device operating system. The valids are "ios", "android" and "wp8".</param>
-        /// <param name="did">Mobiledevice string ID.</param>
+        /// <param name="did">Mobile device string ID.</param>
         /// <returns>A message informing about the device registration status.</returns>
         [HttpGet]
         [Route("device/register/{cid:int:min(1)/{rid}/{mdos}/{did}")]
