@@ -4,10 +4,12 @@ using PushSharp.Apple;
 using PushSharp.Core;
 using PushSharp.CoreProcessor.Utility;
 using PushSharp.DataAccessLayer;
-using PushSharp.WindowsPhone;
+//using PushSharp.WindowsPhone;
+using PushSharp.Windows;
 using System;
 using System.Linq;
 using System.Threading;
+using System.Data.Entity;
 using Error = PushSharp.CoreProcessor.Utility.SimpleErrorLogger;
 
 namespace PushSharp.CoreProcessor
@@ -18,9 +20,11 @@ namespace PushSharp.CoreProcessor
         private PushSharpDatabaseContext _databaseContext;
         private Thread _processorThread;
         private bool _processorThreadRunning = false;
+        private bool _isDirectPush = false;
         private PushBroker _broker;
         private readonly string _googlePushNotificationAuthToken;
         private readonly byte[] _applePushNotificationCertificate;
+        private readonly WindowsPushChannelSettings _windowsPushNotificationChannelSettings;
         //no certs/keys for windows phone 8
 
         // Events
@@ -42,6 +46,9 @@ namespace PushSharp.CoreProcessor
 
             _googlePushNotificationAuthToken = "";//"AIzaSyAhEKqp1ahCYQN7NB-PzQSB3G655xtyZEg";
             _applePushNotificationCertificate = new byte[] { };//File.ReadAllBytes("/Certificates/Apple-PushNotifications-DevCert.p12");
+
+            // TODO: register for windows...
+            _windowsPushNotificationChannelSettings = new WindowsPushChannelSettings("todo", "todo", "todo");
         }
 
         private void InitBroker()
@@ -60,9 +67,9 @@ namespace PushSharp.CoreProcessor
             _broker.OnChannelDestroyed += broker_OnChannelDestroyed;
             _broker.OnChannelException += broker_OnChannelException;
 
-            _broker.RegisterGcmService(new GcmPushChannelSettings(_googlePushNotificationAuthToken));
+            //_broker.RegisterGcmService(new GcmPushChannelSettings(_googlePushNotificationAuthToken));
             //_broker.RegisterAppleService(new ApplePushChannelSettings(false, _applePushNotificationCertificate, "Password"));
-            _broker.RegisterWindowsPhoneService();
+            _broker.RegisterWindowsService(_windowsPushNotificationChannelSettings);
 
             On(DisplayMessage, "Push Broker successfully initialized.");
         }
@@ -137,7 +144,10 @@ namespace PushSharp.CoreProcessor
 
         public bool ProcessNotification(PushSharpDatabaseContext databaseContext, bool isDirectPush = false, PushNotification pushNotification = null)
         {
-            if (isDirectPush)
+            _isDirectPush = isDirectPush;
+            _databaseContext = databaseContext;
+
+            if (_isDirectPush)
                 InitBroker();
 
             On(DisplayMessage, "Checking for unprocessed notifications...");
@@ -146,7 +156,17 @@ namespace PushSharp.CoreProcessor
             try
             {
                 if (notificationEntity != null)
+                {
                     databaseContext.PushNotification.Add(pushNotification);
+                    databaseContext.SaveChanges();
+
+                    // reload the entity
+                    notificationEntity = databaseContext.PushNotification
+                        .Where(x => x.ID == pushNotification.ID)
+                        .Include(x => x.MobileDevice)
+                        .Include(x => x.MobileDevice.Client)
+                        .FirstOrDefault();
+                }
                 else
                     notificationEntity = databaseContext.PushNotification.FirstOrDefault(s =>
                                     s.Status == (int)PushNotificationStatus.Unprocessed &&
@@ -192,21 +212,27 @@ namespace PushSharp.CoreProcessor
                     _broker.QueueNotification(appleNotif);
                     UpdateNotificationQueued(notificationEntity);
                 }
-                //------------------------------
-                // WINDOWS PHONE 8 NOTIFICATIONS
-                //------------------------------
+                //----------------------
+                // WINDOWS NOTIFICATIONS
+                //----------------------
                 else if (notificationEntity.MobileDevice.SmartphonePlatform == "wp8")
                 {
-                    var wpNotif = new WindowsPhoneToastNotification() { Tag = notificationEntity.ID };
+                    var wNotif = new WindowsToastNotification() { Tag = notificationEntity.ID };
 
-                    wpNotif.ForEndpointUri(new Uri(notificationEntity.MobileDevice.PushNotificationsRegistrationID))
-                        .ForOSVersion(WindowsPhoneDeviceOSVersion.Eight)
-                        .WithBatchingInterval(BatchingInterval.Immediate)
-                        .WithNavigatePath("/MainPage.xaml")
-                        .WithText1("PushSharpDemo")
-                        .WithText2(notificationEntity.Message);
+                    wNotif.ForChannelUri(notificationEntity.MobileDevice.PushNotificationsRegistrationID)
+                        .AsToastText01(notificationEntity.Message);
 
-                    _broker.QueueNotification(wpNotif);
+                    // WARNING: this would work for windows phone 8 silverlight, but not Windows Phone 8.1
+                    //var wpNotif = new WindowsPhoneToastNotification() { Tag = notificationEntity.ID };
+                    //wpNotif.ForEndpointUri(new Uri(Uri.UnescapeDataString(notificationEntity.MobileDevice.PushNotificationsRegistrationID)))
+                    //    .ForOSVersion(WindowsPhoneDeviceOSVersion.Eight)
+                    //    .WithBatchingInterval(BatchingInterval.Immediate)
+                    //    .WithText1("PushSharpDemo")
+                    //    .WithText2(notificationEntity.Message);
+
+                    //var isValid = wpNotif.IsValidDeviceRegistrationId();
+
+                    _broker.QueueNotification(wNotif);
                     UpdateNotificationQueued(notificationEntity);
                 }
                 else
@@ -230,17 +256,11 @@ namespace PushSharp.CoreProcessor
                     Error.Log(ex);
                     return false;
                 }
-                finally
-                {
-                    if (isDirectPush)
-                        KillBroker(databaseContext);
-                }
             }
             else
             {
-                if (isDirectPush)
+                if (_isDirectPush)
                     KillBroker(databaseContext);
-
                 // no messages were queued, take a nap...
                 return false;
             }
@@ -288,6 +308,11 @@ namespace PushSharp.CoreProcessor
                 On(DisplayErrorMessage, "EX. ERROR: Get notification from DB: " + ex.Message);
                 Error.Log(ex);
             }
+            finally
+            {
+                if (_isDirectPush)
+                    KillBroker(_databaseContext);
+            }
         }
 
         private void broker_OnDeviceSubscriptionExpired(object sender, string expiredSubscriptionId, DateTime expirationDateUtc, INotification notification)
@@ -305,31 +330,30 @@ namespace PushSharp.CoreProcessor
             On(DisplayErrorMessage, "Notification failed!");
         }
 
-        #region Not broker implemented handlers
         private void broker_OnChannelException(object sender, IPushChannel pushChannel, Exception error)
         {
-            throw new NotImplementedException();
+            On(DisplayErrorMessage, "Channel exception!");
         }
 
         private void broker_OnChannelDestroyed(object sender)
         {
-            throw new NotImplementedException();
+            On(DisplayMessage, "Channel destroyed!");
         }
 
         private void broker_OnChannelCreated(object sender, IPushChannel pushChannel)
         {
-            throw new NotImplementedException();
+            On(DisplayMessage, "Channel created!");
         }
 
         private void broker_OnDeviceSubscriptionChanged(object sender, string oldSubscriptionId, string newSubscriptionId, INotification notification)
         {
-            throw new NotImplementedException();
+            On(DisplayMessage, "Device subscription changed!");
         }
 
         private void broker_OnNotificationRequeue(object sender, NotificationRequeueEventArgs e)
         {
-            throw new NotImplementedException();
+            On(DisplayMessage, "Notification requed!");
         }
-        #endregion
+
     }
 }
