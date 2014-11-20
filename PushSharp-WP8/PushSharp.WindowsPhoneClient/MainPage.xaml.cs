@@ -1,10 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Networking.PushNotifications;
+using Windows.Security.Cryptography;
+using Windows.Security.Cryptography.Core;
+using Windows.Storage.Streams;
+using Windows.System.Profile;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -12,6 +19,10 @@ using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.Web.Http;
+using System.Windows;
+using Windows.UI.Popups;
+using System.Text;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=391641
 
@@ -22,6 +33,7 @@ namespace PushSharp.WindowsPhoneClient
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        private PushNotificationChannel channel = null;
         public MainPage()
         {
             this.InitializeComponent();
@@ -29,20 +41,80 @@ namespace PushSharp.WindowsPhoneClient
             this.NavigationCacheMode = NavigationCacheMode.Required;
         }
 
-        /// <summary>
-        /// Invoked when this page is about to be displayed in a Frame.
-        /// </summary>
-        /// <param name="e">Event data that describes how this page was reached.
-        /// This parameter is typically used to configure the page.</param>
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        void chnl_PushNotificationReceived(PushNotificationChannel sender, PushNotificationReceivedEventArgs args)
         {
-            // TODO: Prepare page for display here.
+            if (args.NotificationType == PushNotificationType.Toast)
+            {
+                channel.PushNotificationReceived += chnl_PushNotificationReceived;
+            }
+        }
 
-            // TODO: If your application contains multiple pages, ensure that you are
-            // handling the hardware Back button by registering for the
-            // Windows.Phone.UI.Input.HardwareButtons.BackPressed event.
-            // If you are using the NavigationHelper provided by some templates,
-            // this event is handled for you.
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        {
+            try
+            {
+                //Windows Server registration
+                channel = await PushNotificationChannelManager.CreatePushNotificationChannelForApplicationAsync();
+
+                Debug.WriteLine("Channel URI: " + channel.Uri.ToString());
+
+                int clientID = 1;
+                String registrationID = channel.Uri.ToString();
+                String registrationIDEncoded = EncodeUrl(registrationID);
+                String mobileDeviceOS = "wp8";
+                String mobileDeviceID = GetDeviceID();
+
+                //WebService string: app.mobendo.com / pushsharp / api / notification / device / register / CID / RID / MDOS / DID
+                String url = String.Format("https://app.mobendo.com/pushsharp/api/notification/device/register/{0}/{1}/{2}/{3}"
+                    , clientID
+                    , registrationIDEncoded
+                    , mobileDeviceOS
+                    , mobileDeviceID);
+
+                Windows.Web.Http.HttpClient oHttpClient = new Windows.Web.Http.HttpClient();
+                Uri uri = new Uri(url);
+
+                HttpRequestMessage mSent = new HttpRequestMessage(HttpMethod.Get, uri);
+                mSent.Headers.Authorization = new Windows.Web.Http.Headers.HttpCredentialsHeaderValue("BASIC", "ZGV2dWc6cHVzaHNoYXJw");
+
+                HttpResponseMessage mReceived = await oHttpClient.SendRequestAsync(mSent, HttpCompletionOption.ResponseContentRead);
+
+                if (mReceived.IsSuccessStatusCode)
+                {
+                    MessageDialog messageDialog = new MessageDialog("Register successful!");
+                    await messageDialog.ShowAsync();
+                }
+                else
+                {
+                    MessageDialog messageDialog = new MessageDialog("Register unsuccessful!");
+                    await messageDialog.ShowAsync();
+                }
+
+            }
+
+            catch (Exception ex)
+            {
+                // Could not create a channel. 
+            }
+        }
+
+        private String GetDeviceID()
+        {
+            HardwareToken token = HardwareIdentification.GetPackageSpecificToken(null);
+            IBuffer hardwareId = token.Id;
+
+            byte[] hwIDBytes = hardwareId.ToArray();
+
+            String deviceID = hwIDBytes.Select(b => b.ToString()).Aggregate((b, next) => b + next);
+
+            return deviceID;
+        }
+
+        private String EncodeUrl(String input)
+        {
+            var bytes = Encoding.UTF8.GetBytes(input);
+            var base64 = Convert.ToBase64String(bytes);
+            return base64;
         }
     }
 }
