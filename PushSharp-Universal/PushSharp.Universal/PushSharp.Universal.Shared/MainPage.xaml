@@ -7,9 +7,14 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
     <Grid Background="#e74d12">
-        <StackPanel VerticalAlignment="Top" Margin="0,200,0,20">
+        <StackPanel VerticalAlignment="Top" Margin="10,50,10,20">
+            <Button x:Name="btnRegister" HorizontalAlignment="Center" Margin="0,25,0,20" Click="btnRegister_Click">Register for Push Notifications</Button>
             <TextBlock HorizontalAlignment="Center" FontSize="32" FontFamily="Segoe Script">mscommunity.hr! :-)</TextBlock>
-            <Button x:Name="btnRegister" HorizontalAlignment="Center" Margin="0,50,0,0" Click="btnRegister_Click">Register for Push Notifications</Button>
+            <HyperlinkButton HorizontalAlignment="Center" NavigateUri="http://twitter.com/vekzdran" Foreground="Red" FontFamily="Segoe UI Light" FontSize="21">@vekzdran</HyperlinkButton>
+            <StackPanel Margin="0,50,0,0">
+                <TextBox x:Name="tbSpeakUp" Margin="0,00,0,0" HorizontalAlignment="Center" Width="380" PlaceholderText="What's on your mind?"></TextBox>
+                <Button x:Name="btnPushAll" Margin="0,11,0,0" HorizontalAlignment="Center" Width="380" Click="btnPushAll_Click">Push, baby push!</Button>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Page>

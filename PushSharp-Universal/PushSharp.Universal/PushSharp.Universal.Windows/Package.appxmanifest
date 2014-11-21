@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
-  <Identity Name="9e1a0c85-96ac-4d17-aaa9-0804c1f38036" Publisher="CN=Vedran" Version="1.0.0.0" />
+  <Identity Name="59011VekzApps.DevUGPushSharp" Publisher="CN=8E934765-15C3-49B8-8065-532DA8341CD2" Version="1.1.0.0" />
   <Properties>
-    <DisplayName>PushSharp.Universal.Windows</DisplayName>
-    <PublisherDisplayName>Vedran Mandić</PublisherDisplayName>
+    <DisplayName>DevUG PushSharp</DisplayName>
+    <PublisherDisplayName>VekzApps</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Prerequisites>
@@ -15,7 +15,7 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="PushSharp.Universal.Windows.App">
-      <m2:VisualElements DisplayName="PushSharp.Universal.Windows" Square150x150Logo="Assets\Logo.png" Square30x30Logo="Assets\SmallLogo.png" Description="A universal app to demonstrate the Push Notifications feature." ForegroundText="light" BackgroundColor="#464646" ToastCapable="true">
+      <m2:VisualElements DisplayName="DevUG PushSharp" Square150x150Logo="Assets\Logo.png" Square30x30Logo="Assets\SmallLogo.png" Description="A universal app to demonstrate the Push Notifications feature." ForegroundText="light" BackgroundColor="#464646" ToastCapable="true">
         <m2:SplashScreen Image="Assets\SplashScreen.png" />
         <m2:InitialRotationPreference>
           <m2:Rotation Preference="landscape" />
