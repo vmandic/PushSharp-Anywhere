@@ -4,12 +4,11 @@ using PushSharp.Apple;
 using PushSharp.Core;
 using PushSharp.CoreProcessor.Utility;
 using PushSharp.DataAccessLayer;
-//using PushSharp.WindowsPhone;
 using PushSharp.Windows;
 using System;
+using System.Data.Entity;
 using System.Linq;
 using System.Threading;
-using System.Data.Entity;
 using Error = PushSharp.CoreProcessor.Utility.SimpleErrorLogger;
 
 namespace PushSharp.CoreProcessor
@@ -27,6 +26,9 @@ namespace PushSharp.CoreProcessor
         private readonly WindowsPushChannelSettings _windowsPushNotificationChannelSettings;
         //no certs/keys for windows phone 8
 
+        // Consts
+        private const int THREAD_SLEEP_DURATION_MILISECONDS = 1000;
+
         // Events
         public delegate void MessageHandler(object sender, string message);
         public event MessageHandler DisplayMessage, DisplayErrorMessage, DisplayStatusMessage;
@@ -41,14 +43,17 @@ namespace PushSharp.CoreProcessor
         // Constructor
         public PushNotificationProcessor(string appStartupPath = "")
         {
-            // REQUIRED PLATFORM AUTHORIZATION TOKENS: 
-            // register for those at: https://developer.apple.com/ and https://developers.google.com/
+            // REQUIRED PLATFORM AUTHORIZATION TOKENS, a specific procedure for each platform, yeah, boring, I know...: 
+            // register for those at: https://developer.apple.com/ and https://developers.google.com/ and https://dev.windows.com/en-us
 
             _googlePushNotificationAuthToken = "";//"AIzaSyAhEKqp1ahCYQN7NB-PzQSB3G655xtyZEg";
             _applePushNotificationCertificate = new byte[] { };//File.ReadAllBytes("/Certificates/Apple-PushNotifications-DevCert.p12");
-
-            // TODO: register for windows...
-            _windowsPushNotificationChannelSettings = new WindowsPushChannelSettings("todo", "todo", "todo");
+            _windowsPushNotificationChannelSettings = new WindowsPushChannelSettings
+            (
+                "DevUG PushSharp",
+                "ms-app://s-1-15-2-3213238880-2107550786-2421520429-602947928-2705327780-3863397066-3184981378",
+                "fV/wA6Brv8OhrJACIkrtWLbVfwSESfyG"
+            );
         }
 
         private void InitBroker()
@@ -134,7 +139,7 @@ namespace PushSharp.CoreProcessor
                 {
                     On(DisplayStatusMessage, "No queued messages found, sleeping...");
                     // give it a rest, it's not that big of a rush...
-                    Thread.Sleep(1000);
+                    Thread.Sleep(THREAD_SLEEP_DURATION_MILISECONDS);
                 }
             }
 
@@ -215,22 +220,12 @@ namespace PushSharp.CoreProcessor
                 //----------------------
                 // WINDOWS NOTIFICATIONS
                 //----------------------
-                else if (notificationEntity.MobileDevice.SmartphonePlatform == "wp8")
+                else if (notificationEntity.MobileDevice.SmartphonePlatform.Equals("wp") || notificationEntity.MobileDevice.SmartphonePlatform.Equals("wsa"))
                 {
                     var wNotif = new WindowsToastNotification() { Tag = notificationEntity.ID };
 
                     wNotif.ForChannelUri(notificationEntity.MobileDevice.PushNotificationsRegistrationID)
                         .AsToastText01(notificationEntity.Message);
-
-                    // WARNING: this would work for windows phone 8 silverlight, but not Windows Phone 8.1
-                    //var wpNotif = new WindowsPhoneToastNotification() { Tag = notificationEntity.ID };
-                    //wpNotif.ForEndpointUri(new Uri(Uri.UnescapeDataString(notificationEntity.MobileDevice.PushNotificationsRegistrationID)))
-                    //    .ForOSVersion(WindowsPhoneDeviceOSVersion.Eight)
-                    //    .WithBatchingInterval(BatchingInterval.Immediate)
-                    //    .WithText1("PushSharpDemo")
-                    //    .WithText2(notificationEntity.Message);
-
-                    //var isValid = wpNotif.IsValidDeviceRegistrationId();
 
                     _broker.QueueNotification(wNotif);
                     UpdateNotificationQueued(notificationEntity);
@@ -261,6 +256,7 @@ namespace PushSharp.CoreProcessor
             {
                 if (_isDirectPush)
                     KillBroker(databaseContext);
+
                 // no messages were queued, take a nap...
                 return false;
             }

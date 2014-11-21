@@ -5,6 +5,8 @@ using PushSharp.WebAPI.Utility;
 using System;
 using System.Linq;
 using System.Web.Http;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace PushSharp.WebAPI.Controllers
 {
@@ -22,7 +24,7 @@ namespace PushSharp.WebAPI.Controllers
         [Route("index")]
         public string Index()
         {
-            return "Welcome to the PushSharp Push Notifications Web Service.";
+            return "Welcome to the PushSharp Push Notifications Web Service Demo. Written by @vekzdran.";
         }
 
         /// <summary>
@@ -33,8 +35,8 @@ namespace PushSharp.WebAPI.Controllers
         /// <param name="direct">Decides wethere the message will be queued in the database or pushed directly, pushes directly if true, else queues to the DB.</param>
         /// <returns>A string information about the sent push message.</returns>
         [HttpGet]
-        [Route("new/{mdid:int:min(1)}/{m}/{direct:int:max(1)}")]
-        public string New(int mdid, string m, int direct)
+        [Route("single/{mdid:int:min(1)}/{m}/{direct:int:max(1)}")]
+        public string Single(int mdid, string m, int direct)
         {
             try
             {
@@ -58,7 +60,7 @@ namespace PushSharp.WebAPI.Controllers
                     if (!Processor.ProcessNotification(DatabaseContext, true, pushNotification))
                         throw new Exception("Error on direct push of the notification!");
                     else
-                        return "Message successfully queued at: " + DateTime.Now.ToString();
+                        return "Message successfully queued for immediate push at: " + DateTime.Now.ToString();
                 }
                 else
                 {
@@ -69,10 +71,51 @@ namespace PushSharp.WebAPI.Controllers
                     DatabaseContext.SaveChanges();
                     DatabaseContext.Dispose();
 
-                    return "Message successfully queued at: " + DateTime.Now.ToString();
+                    return "Message successfully queued for push at: " + DateTime.Now.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                return String.Format("SERVER ERROR! Details: {0} Time: {1}", ex.Message, DateTime.Now.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Pushes a message to all the subscribed devices.
+        /// </summary>
+        /// <param name="m">A string message from 5 to 60 chars.</param>
+        /// <returns>A success or error string message.</returns>
+        [HttpGet]
+        [Route("all/{m}")]
+        public string All(string m)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(m) || m.Length <= 5 || m.Length > 60)
+                    throw new Exception("The message must be between 5 and 60 characters!");
+
+                IEnumerable<int> deviceIds = DatabaseContext.MobileDevice.Where(x => x.Active).Select(x => x.ID).ToList();
+
+                foreach (int mobileDeviceId in deviceIds)
+                {
+                    var pushNotification = new PushNotification()
+                    {
+                        CreatedAt = DateTime.Now,
+                        Message = m,
+                        MobileDeviceID = mobileDeviceId,
+                        ModifiedAt = DateTime.Now,
+                        Description = "(Web API) New message queued for push.",
+                        Status = (int)PushNotificationStatus.Unprocessed
+                    };
+
+                    // queue for push, processor will handle
+                    DatabaseContext.PushNotification.Add(pushNotification);
                 }
 
+                DatabaseContext.SaveChanges();
+                DatabaseContext.Dispose();
 
+                return "Messages successfully queued at: " + DateTime.Now.ToString() + " for push to " + deviceIds.Count() + " devices.";
             }
             catch (Exception ex)
             {
@@ -85,7 +128,7 @@ namespace PushSharp.WebAPI.Controllers
         /// </summary>
         /// <param name="cid">Client ID.</param>
         /// <param name="rid">Registration string ID.</param>
-        /// <param name="mdos">Mobile device operating system. The valids are "ios", "android" and "wp8".</param>
+        /// <param name="mdos">Mobile device operating system. The valids are "ios", "android", "wp" and "wsa" .</param>
         /// <param name="did">Mobile device platform string ID.</param>
         /// <returns>A message informing about the device registration status.</returns>
         [HttpGet]
@@ -100,10 +143,10 @@ namespace PushSharp.WebAPI.Controllers
                     throw new Exception("Required parameters are invalid!");
 
                 if (!_validDevices.Contains(mdos))
-                    throw new Exception("You're pushing a message for an invalid mobile devices OS! Valid OS are: ios, android and wp8.");
+                    throw new Exception("You're pushing a message for an invalid mobile device OS! Valid OS are: ios, android, wp and wsa.");
 
                 // decode the registration channel
-                if (mdos == "wp8")
+                if (mdos.Equals("wp") || mdos.Equals("wsa"))
                     rid = Helpers.DecodeBase64NTimes(rid, 1);
 
                 MobileDevice mobileDevice = DatabaseContext.MobileDevice.FirstOrDefault(x => x.ClientID == cid && x.DeviceID.Equals(did));
