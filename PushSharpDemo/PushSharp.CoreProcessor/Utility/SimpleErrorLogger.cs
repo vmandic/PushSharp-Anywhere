@@ -5,7 +5,7 @@ namespace PushSharp.CoreProcessor.Utility
 {
     public class SimpleErrorLogger
     {
-        public static object _locker = new Object();
+        private readonly static object _locker = new Object();
 
         public static void Log(Exception _ex, bool isInnerException = false)
         {

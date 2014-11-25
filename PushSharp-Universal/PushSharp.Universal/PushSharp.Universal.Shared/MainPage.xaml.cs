@@ -36,25 +36,10 @@ namespace PushSharp.Universal
             #endif
         }
 
-        /// <summary>
-        /// Invoked when this page is about to be displayed in a Frame.
-        /// </summary>
-        /// <param name="e">Event data that describes how this page was reached.
-        /// This parameter is typically used to configure the page.</param>
-        protected async override void OnNavigatedTo(NavigationEventArgs e)
-        {
-            await HandleRegistration();
-        }
-
-        private async Task HandleRegistration()
+        private async void btnRegister_Click(object sender, RoutedEventArgs e)
         {
             if (await _pushNotificationHelper.RegisterForWNS())
                 await _pushNotificationHelper.RegisterChannelTo3rdPartyWS();
-        }
-
-        private async void btnRegister_Click(object sender, RoutedEventArgs e)
-        {
-            await HandleRegistration();
         }
 
         private async void btnPushAll_Click(object sender, RoutedEventArgs e)
@@ -71,6 +56,11 @@ namespace PushSharp.Universal
                 await new MessageDialog("Please more then five characters... and don't spam it please... :)").ShowAsync();
                 btnPushAll.IsEnabled = true;
             }
+        }
+
+        private async void btnUnregister_Click(object sender, RoutedEventArgs e)
+        {
+            await _pushNotificationHelper.UnregisterPushNotifications();
         }
     }
 }

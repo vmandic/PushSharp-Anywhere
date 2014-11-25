@@ -23,6 +23,7 @@ namespace PushSharp.Universal
 
         private Uri _3rdPartyWSUri;
         private Uri _pushAllMessageUri;
+        private Uri _unregisterPN;
         // a hardcoded dummy client ID (that exists on the 3rd party DB) to simulate a real world app
         private readonly int _clientId = 1; 
         private readonly string _mobileDeviceOS;
@@ -30,7 +31,8 @@ namespace PushSharp.Universal
         private string _registrationID;
         // your web service endpoint which will register your device on your DB to later push notifications to it
         private readonly string _registerUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/device/register/{0}/{1}/{2}/{3}";
-        private readonly string _pushAllMessageUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/all/{0}";
+        private readonly string _pushAllMessageUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/all/{0}/{1}";
+        private readonly string _unregisterUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/device/unregister/{0}";
 
         public PushNotificationHelper(string mobileDeviceOS)
         {
@@ -38,6 +40,10 @@ namespace PushSharp.Universal
             this._mobileDeviceID = Utility.GetDeviceID();
         }
 
+
+        /// <summary>
+        /// Registers the current device for a push notification chennel, it will be passed to the 3rd party server.
+        /// </summary>
         public async Task<bool> RegisterForWNS() 
         {
             try
@@ -54,6 +60,53 @@ namespace PushSharp.Universal
             }
         }
 
+        /// <summary>
+        /// Unregisters you from the current 3rd party server for push notifications.
+        /// </summary>
+        public async Task<bool> UnregisterPushNotifications() 
+        {
+            Exception exCatcher;
+
+            try
+            {
+                _unregisterPN = new Uri(String.Format(_unregisterUrlTemplate, Utility.GetDeviceID()));
+
+                var httpClient = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Get, _unregisterPN);
+                request.Headers.Authorization = new HttpCredentialsHeaderValue("BASIC", "ZGV2dWc6cHVzaHNoYXJw");
+                Debug.WriteLine("Sending a request for URL: " + _unregisterPN.AbsolutePath);
+
+                // await the response from the 3rd party WS for unregistration status
+                HttpResponseMessage response = await httpClient.SendRequestAsync(request, HttpCompletionOption.ResponseContentRead);
+                Debug.WriteLine("Response successfully received...");
+
+                var content = await response.Content.ReadAsStringAsync();
+                content = content.Trim('\"');
+
+                bool respOK = response.IsSuccessStatusCode && !content.Contains("SERVER ERROR");
+
+                if (respOK)
+                    await new MessageDialog("Successfully unregistered! :-)\n\n" + content).ShowAsync();
+                else
+                    await new MessageDialog("Unregistration not successful! :-(\n\n" + content).ShowAsync();
+
+                return respOK;
+            }
+            catch (Exception ex)
+            {
+                exCatcher = ex;
+            }
+
+            // in C# 6.0 you can await in catch :-) no need for this dirty hack!
+            if (exCatcher != null)
+                await new MessageDialog("Whoops! An error occured! :-(").ShowAsync();
+
+            return false;
+        }
+
+        /// <summary>
+        /// Registers you for push notifications on the third party server.
+        /// </summary>
         public async Task<bool> RegisterChannelTo3rdPartyWS() 
         {
             Exception exCatcher;
@@ -122,13 +175,18 @@ namespace PushSharp.Universal
         
         }
 
+        /// <summary>
+        /// Pushes your message to everyone subscribed currently to the 3rd party push server. This is a broadcast action.
+        /// </summary>
+        /// <param name="message">The message you are broadcasting, stay polite... :-)</param>
         public async Task<bool> PushAllMessage(string message)
         {
             Exception exCatcher;
 
             try
             {
-                _pushAllMessageUri = new Uri(String.Format(_pushAllMessageUrlTemplate, message));
+                int isDirectPush = 1;
+                _pushAllMessageUri = new Uri(String.Format(_pushAllMessageUrlTemplate, message, isDirectPush));
 
                 var httpClient = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Get, _pushAllMessageUri);

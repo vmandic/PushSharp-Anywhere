@@ -3,10 +3,10 @@ using PushSharp.DataAccessLayer;
 using PushSharp.WebAPI.Filters;
 using PushSharp.WebAPI.Utility;
 using System;
-using System.Linq;
-using System.Web.Http;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Web.Http;
 
 namespace PushSharp.WebAPI.Controllers
 {
@@ -36,8 +36,10 @@ namespace PushSharp.WebAPI.Controllers
         /// <returns>A string information about the sent push message.</returns>
         [HttpGet]
         [Route("single/{mdid:int:min(1)}/{m}/{direct:int:max(1)}")]
-        public string Single(int mdid, string m, int direct)
+        public string Single(int mdid, string m, int direct = 0)
         {
+            bool isDirect = direct == 1;
+
             try
             {
                 if (String.IsNullOrEmpty(m) || m.Length <= 5 || m.Length > 60)
@@ -49,30 +51,19 @@ namespace PushSharp.WebAPI.Controllers
                     Message = m,
                     MobileDeviceID = mdid,
                     ModifiedAt = DateTime.Now,
-                    Status = (int)PushNotificationStatus.Unprocessed
+                    Status = (int)PushNotificationStatus.Unprocessed,
+                    Description = isDirect ? "(Web API) New message pushed directly." : "(Web API) New message queued for push."
                 };
 
-                if (direct == 1)
-                {
-                    pushNotification.Description = "(Web API) New message pushed directly.";
+                // if true, the message will get processed and saved to the DB, dbctx will be disposed
+                if (isDirect && !Processor.ProcessNotification(DatabaseContext, pushNotification, true))
+                    throw new Exception("Error on direct push of the notification!");
 
-                    // if true, the message will get processed and saved to the DB, dbctx will be disposed
-                    if (!Processor.ProcessNotification(DatabaseContext, true, pushNotification))
-                        throw new Exception("Error on direct push of the notification!");
-                    else
-                        return "Message successfully queued for immediate push at: " + DateTime.Now.ToString();
-                }
-                else
-                {
-                    pushNotification.Description = "(Web API) New message queued for push.";
+                // enqueue for push, processor will handle when run
+                if (!isDirect && !Processor.EnqueueNotificationOnDatabase(DatabaseContext, pushNotification))
+                    throw new Exception("Error on enqueuing the push notification to the database!");
 
-                    // queue for push, processor will handle
-                    DatabaseContext.PushNotification.Add(pushNotification);
-                    DatabaseContext.SaveChanges();
-                    DatabaseContext.Dispose();
-
-                    return "Message successfully queued for push at: " + DateTime.Now.ToString();
-                }
+                return String.Format("Message successfully enqueued for {0}push at: {1}", isDirect ? "immediate " : "", DateTime.Now.ToString());
             }
             catch (Exception ex)
             {
@@ -86,36 +77,42 @@ namespace PushSharp.WebAPI.Controllers
         /// <param name="m">A string message from 5 to 60 chars.</param>
         /// <returns>A success or error string message.</returns>
         [HttpGet]
-        [Route("all/{m}")]
-        public string All(string m)
+        [Route("all/{m}/{direct:int:max(1)}")]
+        public string All(string m, int direct = 0)
         {
+            bool isDirect = direct == 1;
+            string responseMessage = String.Empty;
+
             try
             {
                 if (String.IsNullOrEmpty(m) || m.Length <= 5 || m.Length > 60)
-                    throw new Exception("The message must be between 5 and 60 characters!");
+                    throw new Exception("The message must be between 3 and 60 characters!");
 
                 IEnumerable<int> deviceIds = DatabaseContext.MobileDevice.Where(x => x.Active).Select(x => x.ID).ToList();
+                var pushNotifications = new List<PushNotification>();
 
                 foreach (int mobileDeviceId in deviceIds)
                 {
-                    var pushNotification = new PushNotification()
+                    pushNotifications.Add(new PushNotification()
                     {
                         CreatedAt = DateTime.Now,
                         Message = m,
                         MobileDeviceID = mobileDeviceId,
                         ModifiedAt = DateTime.Now,
-                        Description = "(Web API) New message queued for push.",
-                        Status = (int)PushNotificationStatus.Unprocessed
-                    };
-
-                    // queue for push, processor will handle
-                    DatabaseContext.PushNotification.Add(pushNotification);
+                        Status = (int)PushNotificationStatus.Unprocessed,
+                        Description = isDirect ? "(Web API) New message pushed directly." : "(Web API) New message queued for push."
+                    });
                 }
 
-                DatabaseContext.SaveChanges();
-                DatabaseContext.Dispose();
+                // process directly all the messages
+                if (isDirect && !Processor.ProcessNotifications(DatabaseContext, pushNotifications))
+                    throw new Exception("Error on enqueuing the immediate push of all notifications!");
 
-                return "Messages successfully queued at: " + DateTime.Now.ToString() + " for push to " + deviceIds.Count() + " devices.";
+                if (!isDirect && !Processor.EnqueueNotificationsOnDatabase(DatabaseContext, pushNotifications))
+                    throw new Exception("Error on enqueuing the push notification to the database!");
+
+
+                return String.Format("Messages successfully enqueued {0}at: {1} for push to {2} devices.", isDirect ? "for immediate push " : "", DateTime.Now.ToString(), deviceIds.Count());
             }
             catch (Exception ex)
             {
@@ -156,12 +153,12 @@ namespace PushSharp.WebAPI.Controllers
 
                 mobileDevice.ModifiedAt = DateTime.Now;
                 mobileDevice.PushNotificationsRegistrationID = rid;
+                mobileDevice.Active = true;
 
                 if (isNewEntity)
                 {
                     mobileDevice.ClientID = cid;
                     mobileDevice.DeviceID = did;
-                    mobileDevice.Active = true;
                     mobileDevice.CreatedAt = DateTime.Now;
                     mobileDevice.SmartphonePlatform = mdos;
                     DatabaseContext.MobileDevice.Add(mobileDevice);
@@ -171,6 +168,33 @@ namespace PushSharp.WebAPI.Controllers
                 DatabaseContext.Dispose();
 
                 return String.Format("Device {0} successfully at: {1}, MobileDeviceID: {2}", isNewEntity ? "registered" : "updated", DateTime.Now.ToString(), mobileDevice.ID);
+            }
+            catch (Exception ex)
+            {
+                return String.Format("SERVER ERROR! Details: {0} Time: {1}", ex.Message, DateTime.Now.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Unregisters the device for push notifications and deletes all of it's push notifications.
+        /// </summary>
+        /// <param name="did">The device id string.</param>
+        /// <returns>A message informing about the device unregistration status.</returns>
+        [Route("device/unregister/{did}")]
+        public string UnregisterDevice(string did)
+        {
+            try
+            {
+                MobileDevice md = DatabaseContext.MobileDevice.FirstOrDefault(x => x.DeviceID == did);
+
+                if (md == null)
+                    return "Mobile device not found by the sent device ID. Unregistration failed!";
+
+                md.Active = false;
+                DatabaseContext.SaveChanges();
+                DatabaseContext.Dispose();
+
+                return String.Format("Device successfully unregistered at: " + DateTime.Now.ToString());
             }
             catch (Exception ex)
             {
