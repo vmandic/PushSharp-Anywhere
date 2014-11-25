@@ -63,13 +63,13 @@ namespace PushSharp.CoreProcessor
             // REQUIRED PLATFORM AUTHORIZATION TOKENS, a specific procedure for each platform, yeah, boring, I know...
             // register for those at: https://developer.apple.com/ and https://developers.google.com/ and https://dev.windows.com/en-us
 
-            _googlePushNotificationAuthToken = "AIzaSyA778b02P0iF84cZ5SBF5Oz5ty9j64Hmx0";
+            _googlePushNotificationAuthToken = "ENTER SERVER KEY";
             _applePushNotificationCertificate = new byte[] { };//File.ReadAllBytes("/Certificates/Apple-PushNotifications-DevCert.p12");
             _windowsPushNotificationChannelSettings = new WindowsPushChannelSettings
             (
                 "DevUG PushSharp",
-                "ms-app://s-1-15-2-3213238880-2107550786-2421520429-602947928-2705327780-3863397066-3184981378",
-                "fV/wA6Brv8OhrJACIkrtWLbVfwSESfyG"
+                "ENTER CHANNEL KEY",
+                "ENTER SECRET"
             );
         }
 
