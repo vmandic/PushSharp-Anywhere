@@ -408,6 +408,8 @@ namespace PushSharp.CoreProcessor
             if (disposeContext)
             {
                 ctx.Dispose();
+                ctx = null;
+                _databaseContext = null;
                 On(DisplayMessage, "Database context sucessfully disposed.");
             }
         }
