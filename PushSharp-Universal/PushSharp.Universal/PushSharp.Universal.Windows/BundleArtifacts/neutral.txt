@@ -1,0 +1,2 @@
+MainPackage=C:\Users\Vedran\Source\Repos\DevUG-PushSharp\PushSharp-Universal\PushSharp.Universal\PushSharp.Universal.Windows\bin\Release\PushSharp.Universal.Windows_1.1.0.2_Bundle\PushSharp.Universal.Windows_1.1.0.2_AnyCPU.appx
+SymbolPackage=C:\Users\Vedran\Source\Repos\DevUG-PushSharp\PushSharp-Universal\PushSharp.Universal\PushSharp.Universal.Windows\AppPackages\PushSharp.Universal.Windows_1.1.0.2_Test\PushSharp.Universal.Windows_1.1.0.2_AnyCPU.appxsym

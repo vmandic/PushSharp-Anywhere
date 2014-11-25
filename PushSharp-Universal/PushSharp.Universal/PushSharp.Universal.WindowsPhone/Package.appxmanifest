@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest" xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
-  <Identity Name="59011VekzApps.DevUGPushSharp" Publisher="CN=8E934765-15C3-49B8-8065-532DA8341CD2" Version="1.1.0.0" />
+  <Identity Name="59011VekzApps.DevUGPushSharp" Publisher="CN=8E934765-15C3-49B8-8065-532DA8341CD2" Version="1.1.0.2" />
   <mp:PhoneIdentity PhoneProductId="0f75deea-59f1-43c9-b4f0-6d5fcc8b3809" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>DevUG PushSharp</DisplayName>
