@@ -36,41 +36,48 @@ namespace PushSharp.Universal
             #endif
         }
 
-        /// <summary>
-        /// Invoked when this page is about to be displayed in a Frame.
-        /// </summary>
-        /// <param name="e">Event data that describes how this page was reached.
-        /// This parameter is typically used to configure the page.</param>
-        protected async override void OnNavigatedTo(NavigationEventArgs e)
-        {
-            await HandleRegistration();
-        }
-
-        private async Task HandleRegistration()
-        {
-            if (await _pushNotificationHelper.RegisterForWNS())
-                await _pushNotificationHelper.RegisterChannelTo3rdPartyWS();
-        }
-
         private async void btnRegister_Click(object sender, RoutedEventArgs e)
         {
-            await HandleRegistration();
+            ButtonsEnabled(false);
+
+            if (await _pushNotificationHelper.RegisterForWNS())
+                await _pushNotificationHelper.RegisterChannelTo3rdPartyWS();
+
+            ButtonsEnabled();
         }
 
         private async void btnPushAll_Click(object sender, RoutedEventArgs e)
         {
-            btnPushAll.IsEnabled = false;
+            await HandlePushOrEnque(1);
+        }
+
+        private async Task HandlePushOrEnque(int pushOrEnque)
+        {
+            ButtonsEnabled(false);
 
             if (!String.IsNullOrEmpty(tbSpeakUp.Text) && tbSpeakUp.Text.Length > 5)
-            {
-                await _pushNotificationHelper.PushAllMessage(tbSpeakUp.Text);
-                btnPushAll.IsEnabled = true;
-            }
+                await _pushNotificationHelper.PushAllMessage(tbSpeakUp.Text, pushOrEnque);
             else
-            {
                 await new MessageDialog("Please more then five characters... and don't spam it please... :)").ShowAsync();
-                btnPushAll.IsEnabled = true;
-            }
+
+            ButtonsEnabled();
+        }
+
+        private void ButtonsEnabled(bool isEnabled = true)
+        {
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = btnEnqueue.IsEnabled = isEnabled;
+        }
+
+        private async void btnUnregister_Click(object sender, RoutedEventArgs e)
+        {
+            ButtonsEnabled(false);
+            await _pushNotificationHelper.UnregisterPushNotifications();
+            ButtonsEnabled();
+        }
+
+        private async void btnEnqueue_Click(object sender, RoutedEventArgs e)
+        {
+            await HandlePushOrEnque(0);
         }
     }
 }

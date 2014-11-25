@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
-  <Identity Name="59011VekzApps.DevUGPushSharp" Publisher="CN=8E934765-15C3-49B8-8065-532DA8341CD2" Version="1.1.0.0" />
+  <Identity Name="59011VekzApps.DevUGPushSharp" Publisher="CN=8E934765-15C3-49B8-8065-532DA8341CD2" Version="1.1.0.2" />
   <Properties>
     <DisplayName>DevUG PushSharp</DisplayName>
     <PublisherDisplayName>VekzApps</PublisherDisplayName>
