@@ -16,3 +16,5 @@ Clients: Enter your 3rd party server endpoints in the PushNotificationHelper.cs
 Disclaimer
 ===============
 This demo project was built for a show case on the mscommunity.hr standup/meetup in Zagreb held at 25.11.2014. No coded tests were performed, bugs are possible, please contribute and fork on!
+
+iOS is unfortunately not finished.
