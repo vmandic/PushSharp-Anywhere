@@ -175,7 +175,7 @@ public class MainActivity extends Activity {
     private void sendRegistrationIdToBackend() {
         // Your implementation here.
 
-        String url = "https://app.mobendo.com/pushsharp/api/notification/device/register/" + "1/" + regid + "/android/" + android_id;
+        String url = "https://your.server.com/pushsharp/api/notification/device/register/" + "1/" + regid + "/android/" + android_id;
         HttpClient httpclient = new DefaultHttpClient();
 
         try {

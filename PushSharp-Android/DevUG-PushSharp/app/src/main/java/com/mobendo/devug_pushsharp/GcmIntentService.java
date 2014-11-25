@@ -83,7 +83,8 @@ public class GcmIntentService extends IntentService {
         builder.setSmallIcon(R.drawable.logo)
                 .setContentTitle("DevUG-PushSharp")
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
-                .setContentText(msg);
+                .setContentText(msg)
+                .setAutoCancel(true);
 
         builder.setContentIntent(contentIntent);
         notificationManager.notify(NOTIFICATION_ID, builder.build());
