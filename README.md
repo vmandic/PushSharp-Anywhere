@@ -7,6 +7,12 @@ This solution is consisted from a couple of separate projects including shared p
 
 The repo is also planned to have 3 (iOS, Android and WP8) client implementations connecting to a implemented PushSharp service server.
 
+Instruction for use
+===============
+Server: Enter all connection strings to your database where needed, register for push notifications on the service providers: Google, Apple and Microsoft, enter the provided keys to PushNotificationProcessor.cs.
+
+Clients: Enter your 3rd party server endpoints in the PushNotificationHelper.cs
+
 Disclaimer
 ===============
 This demo project was built for a show case on the mscommunity.hr standup/meetup in Zagreb held at 25.11.2014. No coded tests were performed, bugs are possible, please contribute and fork on!
