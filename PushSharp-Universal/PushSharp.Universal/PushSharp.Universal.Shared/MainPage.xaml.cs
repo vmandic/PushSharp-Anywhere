@@ -38,29 +38,31 @@ namespace PushSharp.Universal
 
         private async void btnRegister_Click(object sender, RoutedEventArgs e)
         {
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = false;
+
             if (await _pushNotificationHelper.RegisterForWNS())
                 await _pushNotificationHelper.RegisterChannelTo3rdPartyWS();
+
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = true;
         }
 
         private async void btnPushAll_Click(object sender, RoutedEventArgs e)
         {
-            btnPushAll.IsEnabled = false;
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = false;
 
             if (!String.IsNullOrEmpty(tbSpeakUp.Text) && tbSpeakUp.Text.Length > 5)
-            {
                 await _pushNotificationHelper.PushAllMessage(tbSpeakUp.Text);
-                btnPushAll.IsEnabled = true;
-            }
             else
-            {
                 await new MessageDialog("Please more then five characters... and don't spam it please... :)").ShowAsync();
-                btnPushAll.IsEnabled = true;
-            }
+
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = true;
         }
 
         private async void btnUnregister_Click(object sender, RoutedEventArgs e)
         {
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = false;
             await _pushNotificationHelper.UnregisterPushNotifications();
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = true;
         }
     }
 }

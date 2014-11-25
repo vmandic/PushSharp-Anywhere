@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Windows.Networking.PushNotifications;
 using Windows.UI.Popups;
+using Windows.UI.Xaml.Controls;
 using Windows.Web.Http;
 using Windows.Web.Http.Headers;
 
@@ -86,7 +87,10 @@ namespace PushSharp.Universal
                 bool respOK = response.IsSuccessStatusCode && !content.Contains("SERVER ERROR");
 
                 if (respOK)
+                {
                     await new MessageDialog("Successfully unregistered! :-)\n\n" + content).ShowAsync();
+                    _registeredSuccessfully = false;
+                }
                 else
                     await new MessageDialog("Unregistration not successful! :-(\n\n" + content).ShowAsync();
 
@@ -181,6 +185,13 @@ namespace PushSharp.Universal
         /// <param name="message">The message you are broadcasting, stay polite... :-)</param>
         public async Task<bool> PushAllMessage(string message)
         {
+            if (!_registeredSuccessfully)
+            {
+                await new MessageDialog("Please register first for the push notifications!").ShowAsync();
+                return false;
+            }
+
+
             Exception exCatcher;
 
             try

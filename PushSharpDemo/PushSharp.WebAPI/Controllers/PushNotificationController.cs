@@ -45,6 +45,11 @@ namespace PushSharp.WebAPI.Controllers
                 if (String.IsNullOrEmpty(m) || m.Length <= 5 || m.Length > 60)
                     throw new Exception("The message must be between 5 and 60 characters!");
 
+                MobileDevice mobileDevice = DatabaseContext.MobileDevice.FirstOrDefault(x => x.ID == mdid);
+
+                if (mobileDevice == null)
+                    return "The message could not be pushed to an unexisting device! There is no device for the id: " + mdid;
+
                 var pushNotification = new PushNotification()
                 {
                     CreatedAt = DateTime.Now,
@@ -181,6 +186,7 @@ namespace PushSharp.WebAPI.Controllers
         /// <param name="did">The device id string.</param>
         /// <returns>A message informing about the device unregistration status.</returns>
         [Route("device/unregister/{did}")]
+        [HttpGet]
         public string UnregisterDevice(string did)
         {
             try
