@@ -38,31 +38,46 @@ namespace PushSharp.Universal
 
         private async void btnRegister_Click(object sender, RoutedEventArgs e)
         {
-            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = false;
+            ButtonsEnabled(false);
 
             if (await _pushNotificationHelper.RegisterForWNS())
                 await _pushNotificationHelper.RegisterChannelTo3rdPartyWS();
 
-            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = true;
+            ButtonsEnabled();
         }
 
         private async void btnPushAll_Click(object sender, RoutedEventArgs e)
         {
-            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = false;
+            await HandlePushOrEnque(1);
+        }
+
+        private async Task HandlePushOrEnque(int pushOrEnque)
+        {
+            ButtonsEnabled(false);
 
             if (!String.IsNullOrEmpty(tbSpeakUp.Text) && tbSpeakUp.Text.Length > 5)
-                await _pushNotificationHelper.PushAllMessage(tbSpeakUp.Text);
+                await _pushNotificationHelper.PushAllMessage(tbSpeakUp.Text, pushOrEnque);
             else
                 await new MessageDialog("Please more then five characters... and don't spam it please... :)").ShowAsync();
 
-            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = true;
+            ButtonsEnabled();
+        }
+
+        private void ButtonsEnabled(bool isEnabled = true)
+        {
+            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = btnEnqueue.IsEnabled = isEnabled;
         }
 
         private async void btnUnregister_Click(object sender, RoutedEventArgs e)
         {
-            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = false;
+            ButtonsEnabled(false);
             await _pushNotificationHelper.UnregisterPushNotifications();
-            btnPushAll.IsEnabled = btnRegister.IsEnabled = btnUnregister.IsEnabled = true;
+            ButtonsEnabled();
+        }
+
+        private async void btnEnqueue_Click(object sender, RoutedEventArgs e)
+        {
+            await HandlePushOrEnque(0);
         }
     }
 }

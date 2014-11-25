@@ -14,7 +14,7 @@ namespace PushSharp.Universal
         private PushNotificationChannel _channel;
         private bool _registeredSuccessfully;
 
-        public PushNotificationChannel Channel 
+        public PushNotificationChannel Channel
         {
             get
             {
@@ -26,7 +26,7 @@ namespace PushSharp.Universal
         private Uri _pushAllMessageUri;
         private Uri _unregisterPN;
         // a hardcoded dummy client ID (that exists on the 3rd party DB) to simulate a real world app
-        private readonly int _clientId = 1; 
+        private readonly int _clientId = 1;
         private readonly string _mobileDeviceOS;
         private readonly string _mobileDeviceID;
         private string _registrationID;
@@ -45,7 +45,7 @@ namespace PushSharp.Universal
         /// <summary>
         /// Registers the current device for a push notification chennel, it will be passed to the 3rd party server.
         /// </summary>
-        public async Task<bool> RegisterForWNS() 
+        public async Task<bool> RegisterForWNS()
         {
             try
             {
@@ -64,7 +64,7 @@ namespace PushSharp.Universal
         /// <summary>
         /// Unregisters you from the current 3rd party server for push notifications.
         /// </summary>
-        public async Task<bool> UnregisterPushNotifications() 
+        public async Task<bool> UnregisterPushNotifications()
         {
             Exception exCatcher;
 
@@ -111,7 +111,7 @@ namespace PushSharp.Universal
         /// <summary>
         /// Registers you for push notifications on the third party server.
         /// </summary>
-        public async Task<bool> RegisterChannelTo3rdPartyWS() 
+        public async Task<bool> RegisterChannelTo3rdPartyWS()
         {
             Exception exCatcher;
 
@@ -149,7 +149,7 @@ namespace PushSharp.Universal
 
                     var content = await response.Content.ReadAsStringAsync();
                     content = content.Trim('\"');
-                    
+
                     if (response.IsSuccessStatusCode && !content.Contains("SERVER ERROR"))
                     {
                         await new MessageDialog("Registered successfully to the 3rd party WS! :-)\n\n" + content).ShowAsync();
@@ -176,27 +176,26 @@ namespace PushSharp.Universal
                 await new MessageDialog("Whoops! An error occured! :-(").ShowAsync();
 
             return false;
-        
         }
 
         /// <summary>
         /// Pushes your message to everyone subscribed currently to the 3rd party push server. This is a broadcast action.
         /// </summary>
         /// <param name="message">The message you are broadcasting, stay polite... :-)</param>
-        public async Task<bool> PushAllMessage(string message)
+        /// <param name="pushOrEnque">Decides wether you push or enque the message.</param>
+        public async Task<bool> PushAllMessage(string message, int pushOrEnque)
         {
             if (!_registeredSuccessfully)
             {
-                await new MessageDialog("Please register first for the push notifications!").ShowAsync();
+                await new MessageDialog("Please register first for push notifications!").ShowAsync();
                 return false;
             }
-
 
             Exception exCatcher;
 
             try
             {
-                int isDirectPush = 1;
+                int isDirectPush = pushOrEnque;
                 _pushAllMessageUri = new Uri(String.Format(_pushAllMessageUrlTemplate, message, isDirectPush));
 
                 var httpClient = new HttpClient();
