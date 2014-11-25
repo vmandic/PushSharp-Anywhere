@@ -116,7 +116,6 @@
       <SubType>Designer</SubType>
     </AppxManifest>
     <None Include="PushSharp.Universal.Windows_StoreKey.pfx" />
-    <None Include="PushSharp.Universal.Windows_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Logo.scale-100.png" />

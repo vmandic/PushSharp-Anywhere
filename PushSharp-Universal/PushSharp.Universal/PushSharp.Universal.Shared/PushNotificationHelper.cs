@@ -31,9 +31,9 @@ namespace PushSharp.Universal
         private readonly string _mobileDeviceID;
         private string _registrationID;
         // your web service endpoint which will register your device on your DB to later push notifications to it
-        private readonly string _registerUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/device/register/{0}/{1}/{2}/{3}";
-        private readonly string _pushAllMessageUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/all/{0}/{1}";
-        private readonly string _unregisterUrlTemplate = "https://app.mobendo.com/pushsharp/api/notification/device/unregister/{0}";
+        private readonly string _registerUrlTemplate = "https://your.server.com/pushsharp/api/notification/device/register/{0}/{1}/{2}/{3}";
+        private readonly string _pushAllMessageUrlTemplate = "https://your.server.com/pushsharp/api/notification/all/{0}/{1}";
+        private readonly string _unregisterUrlTemplate = "https://your.server.com/pushsharp/api/notification/device/unregister/{0}";
 
         public PushNotificationHelper(string mobileDeviceOS)
         {
