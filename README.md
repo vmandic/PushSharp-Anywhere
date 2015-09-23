@@ -19,7 +19,7 @@ Disclaimer
 ===============
 This project was built for a show case on the mscommunity.hr standup/meetup in Zagreb held at 25.11.2014. No coded tests were performed, bugs are possible, please contribute and fork on! 
 
-Update
+Update 23.9.2015.
 ===============
 Project is currently in update for the conference MobilityDay 2015 showcase.
 
