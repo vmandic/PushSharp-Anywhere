@@ -10,9 +10,12 @@ namespace PushSharp.Universal
     {
         public static string GetDeviceID()
         {
+            // Vedran: A very big thanks to Matija Leskovar for contribution. 
+            // https://github.com/matijaleskovar
+
             // retrieve the ID bytes
             byte[] hwIDBytes = HardwareIdentification.GetPackageSpecificToken(null).Id.ToArray();
-            // build up the ID
+            // map reduce the ID... fun...
             return hwIDBytes.Select(b => b.ToString()).Aggregate((b, next) => b + next);
         }
 

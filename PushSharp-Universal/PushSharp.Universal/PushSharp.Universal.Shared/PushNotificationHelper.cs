@@ -25,22 +25,22 @@ namespace PushSharp.Universal
         private Uri _3rdPartyWSUri;
         private Uri _pushAllMessageUri;
         private Uri _unregisterPN;
-        // a hardcoded dummy client ID (that exists on the 3rd party DB) to simulate a real world app
+        // a random dummy client ID (that exists on the 3rd party DB) to simulate a real world app
         private readonly int _clientId = 1;
         private readonly string _mobileDeviceOS;
         private readonly string _mobileDeviceID;
         private string _registrationID;
+        private static readonly string _serverAppPath = "your.server.com";
         // your web service endpoint which will register your device on your DB to later push notifications to it
-        private readonly string _registerUrlTemplate = "https://your.server.com/pushsharp/api/notification/device/register/{0}/{1}/{2}/{3}";
-        private readonly string _pushAllMessageUrlTemplate = "https://your.server.com/pushsharp/api/notification/all/{0}/{1}";
-        private readonly string _unregisterUrlTemplate = "https://your.server.com/pushsharp/api/notification/device/unregister/{0}";
+        private static string _registerUrlTemplate = _serverAppPath + "api/notification/device/register/{0}/{1}/{2}/{3}";
+        private static string _pushAllMessageUrlTemplate = _serverAppPath + "api/notification/all/{0}/{1}";
+        private static string _unregisterUrlTemplate = _serverAppPath + "api/notification/device/unregister/{0}";
 
         public PushNotificationHelper(string mobileDeviceOS)
         {
             this._mobileDeviceOS = mobileDeviceOS;
             this._mobileDeviceID = Utility.GetDeviceID();
         }
-
 
         /// <summary>
         /// Registers the current device for a push notification chennel, it will be passed to the 3rd party server.
@@ -81,8 +81,7 @@ namespace PushSharp.Universal
                 HttpResponseMessage response = await httpClient.SendRequestAsync(request, HttpCompletionOption.ResponseContentRead);
                 Debug.WriteLine("Response successfully received...");
 
-                var content = await response.Content.ReadAsStringAsync();
-                content = content.Trim('\"');
+                var content = (await response.Content.ReadAsStringAsync()).Trim('\"');
 
                 bool respOK = response.IsSuccessStatusCode && !content.Contains("SERVER ERROR");
 
@@ -127,7 +126,7 @@ namespace PushSharp.Universal
                 {
                     _registrationID = Utility.Base64Encode(_channel.Uri.ToString());
 
-                    // WS endpoint (in our case): app.mobendo.com / pushsharp / api / notification / device / register / CID / RID / MDOS / DID
+                    // WS endpoint (in our case): your.server.com / pushsharp / api / notification / device / register / CID / RID / MDOS / DID
                     // build the endpoint URL; send a dummy client ID, channel registration ID, operating system ID and device ID
                     _3rdPartyWSUri = new Uri(String.Format
                     (
@@ -147,8 +146,7 @@ namespace PushSharp.Universal
                     HttpResponseMessage response = await httpClient.SendRequestAsync(request, HttpCompletionOption.ResponseContentRead);
                     Debug.WriteLine("Response successfully received...");
 
-                    var content = await response.Content.ReadAsStringAsync();
-                    content = content.Trim('\"');
+                    var content = (await response.Content.ReadAsStringAsync()).Trim('\"');
 
                     if (response.IsSuccessStatusCode && !content.Contains("SERVER ERROR"))
                     {
@@ -157,7 +155,7 @@ namespace PushSharp.Universal
                     }
                     else
                     {
-                        await new MessageDialog("Registered unsuccessfully to the 3rd party WS! :-(\n\n" + content).ShowAsync();
+                        await new MessageDialog("Failed to register to the 3rd party WS! :-(\n\n" + content).ShowAsync();
                         _registeredSuccessfully = false;
                     }
 
@@ -195,16 +193,14 @@ namespace PushSharp.Universal
 
             try
             {
-                int isDirectPush = pushOrEnque;
-                _pushAllMessageUri = new Uri(String.Format(_pushAllMessageUrlTemplate, message, isDirectPush));
+                _pushAllMessageUri = new Uri(String.Format(_pushAllMessageUrlTemplate, message, pushOrEnque));
 
                 var httpClient = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Get, _pushAllMessageUri);
                 request.Headers.Authorization = new HttpCredentialsHeaderValue("BASIC", "ZGV2dWc6cHVzaHNoYXJw");
                 HttpResponseMessage response = await httpClient.SendRequestAsync(request, HttpCompletionOption.ResponseContentRead);
 
-                var content = await response.Content.ReadAsStringAsync();
-                content = content.Trim('\"');
+                var content = (await response.Content.ReadAsStringAsync()).Trim('\"');
 
                 if (response.IsSuccessStatusCode && !content.Contains("SERVER ERROR"))
                     await new MessageDialog("Success! :-)\n\n" + content).ShowAsync();

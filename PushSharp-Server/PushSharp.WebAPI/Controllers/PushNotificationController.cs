@@ -110,7 +110,7 @@ namespace PushSharp.WebAPI.Controllers
                 }
 
                 // process directly all the messages
-                if (isDirect && !Processor.ProcessNotifications(DatabaseContext, pushNotifications))
+                if (isDirect && !Processor.ProcessNotificationsImmediately(DatabaseContext, pushNotifications))
                     throw new Exception("Error on enqueuing the immediate push of all notifications!");
 
                 if (!isDirect && !Processor.EnqueueNotificationsOnDatabase(DatabaseContext, pushNotifications))

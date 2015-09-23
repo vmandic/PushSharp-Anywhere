@@ -1,4 +1,4 @@
-﻿CREATE DATABASE PushSharpDEMO
+﻿CREATE DATABASE PushSharpDemo
 
 GO
 USE PushSharpDemo

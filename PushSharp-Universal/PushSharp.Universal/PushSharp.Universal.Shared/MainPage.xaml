@@ -10,12 +10,13 @@
         <StackPanel VerticalAlignment="Top" Margin="10,0,10,20">
             <Button x:Name="btnUnregister" HorizontalAlignment="Center" Width="280" Margin="0,25,0,0" Click="btnUnregister_Click">Unregister Push Notifications</Button>
             <Button x:Name="btnRegister" HorizontalAlignment="Center" Width="280" Margin="0,0,0,10" Click="btnRegister_Click">Register for Push Notifications</Button>
-            <TextBlock HorizontalAlignment="Center" FontSize="32" FontFamily="Segoe Script">mscommunity.hr! :-)</TextBlock>
-            <HyperlinkButton HorizontalAlignment="Center" NavigateUri="http://twitter.com/vekzdran" Foreground="Red" FontFamily="Segoe UI Light" FontSize="21">@vekzdran</HyperlinkButton>
+            <TextBlock HorizontalAlignment="Center" FontSize="32" FontFamily="Segoe Script">mobilityday.com</TextBlock>
+            <HyperlinkButton HorizontalAlignment="Center" NavigateUri="http://twitter.com/vekzdran" Foreground="White" FontFamily="Segoe UI Light" FontSize="21">@vekzdran</HyperlinkButton>
             <StackPanel Margin="0,10,0,0">
-                <TextBox x:Name="tbSpeakUp" HorizontalAlignment="Center" Width="380" PlaceholderText="What's on your mind?"></TextBox>
-                <Button x:Name="btnPushAll" HorizontalAlignment="Center" Width="380" Click="btnPushAll_Click">Push, baby push! (broadcast)</Button>
-                <Button x:Name="btnEnqueue" HorizontalAlignment="Center" Width="380" Click="btnEnqueue_Click">Enque for everyone (broadcast)</Button>
+                <TextBox x:Name="tbSpeakUp" HorizontalAlignment="Center" Width="380" PlaceholderText="What's on your mind?" Margin="0,0,0,10"></TextBox>
+                <Button x:Name="btnPushAll" HorizontalAlignment="Center" Width="380" Click="btnPushAll_Click">Push to everyone (broadcast)</Button>
+                <Button x:Name="btnEnqueue" HorizontalAlignment="Center" Width="380" Click="btnEnqueue_Click" Margin="0,0,0,10">Enque for everyone (broadcast)</Button>
+                <TextBlock x:Name="lblProcessing" HorizontalAlignment="Center" FontSize="36" FontFamily="Segoe Script" Visibility="Collapsed">Processing...</TextBlock>
             </StackPanel>
         </StackPanel>
     </Grid>

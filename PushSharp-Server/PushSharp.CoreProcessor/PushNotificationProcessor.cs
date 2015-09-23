@@ -27,6 +27,7 @@ namespace PushSharp.CoreProcessor
         private readonly string _googlePushNotificationAuthToken;
         private readonly byte[] _applePushNotificationCertificate;
         private readonly WindowsPushChannelSettings _windowsPushNotificationChannelSettings;
+        private int _immediatePushCounter = 0;
 
         // The thread safe lazy accessor for the database context
         protected PushSharpDatabaseContext DatabaseContext
@@ -44,7 +45,7 @@ namespace PushSharp.CoreProcessor
         }
 
         // Consts
-        public readonly int THREAD_SLEEP_DURATION_MILISECONDS = 1000;
+        public readonly int THREAD_SLEEP_DURATION_MILISECONDS = 2000;
 
         // Events
         public delegate void MessageHandler(object sender, string message);
@@ -55,16 +56,18 @@ namespace PushSharp.CoreProcessor
             // check for subsriptions, if some, do some!
             if (handler != null)
                 handler(this, msg);
+
+            SimpleErrorLogger.Trace(msg);
         }
 
         // Constructor
         public PushNotificationProcessor(string appStartupPath = "")
         {
             // REQUIRED PLATFORM AUTHORIZATION TOKENS, a specific procedure for each platform, yeah, boring, I know...
-            // register for those at: https://developer.apple.com/ and https://developers.google.com/ and https://dev.windows.com/en-us
+            // register for those at: https://developer.apple.com/ and https://console.developers.google.com/ and https://dev.windows.com/en-us
 
             _googlePushNotificationAuthToken = "ENTER SERVER KEY";
-            _applePushNotificationCertificate = new byte[] { };//File.ReadAllBytes("/Certificates/Apple-PushNotifications-DevCert.p12");
+            _applePushNotificationCertificate = new byte[] { }; //File.ReadAllBytes("/Certificates/Apple-PushNotifications-DevCert.p12");
             _windowsPushNotificationChannelSettings = new WindowsPushChannelSettings
             (
                 "DevUG PushSharp",
@@ -93,7 +96,11 @@ namespace PushSharp.CoreProcessor
             _broker.OnChannelException += broker_OnChannelException;
 
             _broker.RegisterGcmService(new GcmPushChannelSettings(_googlePushNotificationAuthToken));
-            //_broker.RegisterAppleService(new ApplePushChannelSettings(false, _applePushNotificationCertificate, "Password"));
+
+            // NOTE: in this case we are skipping apple stuff, 
+            // if you wish to use apple iOS notifications uncomment below and use the proper cert i.e. dev/prod
+            // _broker.RegisterAppleService(new ApplePushChannelSettings(false, _applePushNotificationCertificate, "Password"));
+
             _broker.RegisterWindowsService(_windowsPushNotificationChannelSettings);
 
             On(DisplayMessage, "Push Broker successfully initialized.");
@@ -186,47 +193,45 @@ namespace PushSharp.CoreProcessor
         /// <param name="databaseContext">The current database context to be used for processing to the database.</param>
         /// <param name="pushNotifications">A list of push notifitcation entities to be processed and saved.</param>
         /// <returns>True if all OK, false if sth. goes wrong.</returns>
-        public bool ProcessNotifications(PushSharpDatabaseContext databaseContext, IList<PushNotification> pushNotifications)
+        public bool ProcessNotificationsImmediately(PushSharpDatabaseContext dbContext, IList<PushNotification> pushNotifications)
         {
-            _databaseContext = databaseContext;
-
             try
             {
                 // runs the broker during the loop, then stops
                 InitBroker();
 
-                foreach (var pushNotification in pushNotifications)
-                {
-                    if (!ProcessNotification(_databaseContext, pushNotification, false))
-                        throw new Exception("INTERNAL EX. ERROR: Error on processing a single notification in ProcessNotifications method!");
-                }
+                _immediatePushCounter = pushNotifications.Count;
 
-                // stop the broker, all should be processed...
-                KillBroker(_databaseContext);
+                foreach (var pushNotification in pushNotifications)
+                    if (!ProcessNotification(dbContext, pushNotification, false))
+                        throw new Exception("INTERNAL EX. ERROR: Error on processing a single notification in ProcessNotifications method!");
+
+                // the broker can be stopped by the counter only, all should be processed...
+                // KillBroker(_databaseContext);
                 return true;
             }
             catch (Exception ex)
             {
                 On(DisplayErrorMessage, "EX. ERROR: Saving and pushing multiple notifications: " + ex.Message);
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
                 return false;
             }
         }
 
         /// <summary>
         /// The main processor method used to process a single push notification, checks if the processing will be an immediate single push or regular thread looping model. 
-        /// Looks up for a single entity in the databae which has not been processed. 
+        /// Looks up for a single (or more if you wish) entity in the databae which has not been processed. 
         /// Puts the fetched unprocessed push notification entity to processing over the Push Sharp API. 
         /// Finally saves the state of processing.
         /// </summary>
-        /// <param name="databaseContext">The database context used for fetching and persisting data.</param>
+        /// <param name="databaseContext">The current database context to be used for processing to the database.</param>
         /// <param name="pushNotification">A single push notification entity to be processed and saved.</param>
         /// <param name="isDirectSinglePush">Decides wethere the processing will take place immediately for the sent notification or will the method lookup from the database for a first unprocessed push notification.</param>
         /// <returns>True if all OK, false if not.</returns>
-        public bool ProcessNotification(PushSharpDatabaseContext databaseContext, PushNotification pushNotification = null, bool isDirectSinglePush = false)
+        public bool ProcessNotification(PushSharpDatabaseContext dbContext, PushNotification pushNotification = null, bool isDirectSinglePush = false)
         {
+            _databaseContext = dbContext;
             _isDirectSinglePush = isDirectSinglePush;
-            _databaseContext = databaseContext;
 
             if (_isDirectSinglePush)
                 InitBroker();
@@ -249,20 +254,22 @@ namespace PushSharp.CoreProcessor
                         .Include(x => x.MobileDevice.Client)
                         .FirstOrDefault();
                 }
-                else
+                else // take one latest unprocessed notification, this can be changed to take any set size instead of one
                     notificationEntity = _databaseContext.PushNotification.FirstOrDefault(s =>
-                                    s.Status == (int)PushNotificationStatus.Unprocessed &&
-                                    s.CreatedAt <= DateTime.Now);
+                        s.Status == (int)PushNotificationStatus.Unprocessed &&
+                        s.CreatedAt <= DateTime.Now);
             }
             catch (Exception ex)
             {
                 On(DisplayErrorMessage, "EX. ERROR: Check for unprocessed notifications: " + ex.Message);
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
             }
 
             // Process i.e. push the push notification via PushSharp... 
             if (notificationEntity != null)
             {
+                bool messagePushed = true;
+
                 On(DisplayStatusMessage, "Processing notification...");
                 On(DisplayMessage, "ID " + notificationEntity.ID + " for " + notificationEntity.MobileDevice.Client.Username + " -> " + notificationEntity.Message);
 
@@ -303,7 +310,7 @@ namespace PushSharp.CoreProcessor
                     var wNotif = new WindowsToastNotification() { Tag = notificationEntity.ID };
 
                     wNotif.ForChannelUri(notificationEntity.MobileDevice.PushNotificationsRegistrationID)
-                        .AsToastText01(notificationEntity.Message);
+                        .AsToastText02("PushSharp Notification", notificationEntity.Message);
 
                     _broker.QueueNotification(wNotif);
                     UpdateNotificationQueued(notificationEntity);
@@ -315,19 +322,36 @@ namespace PushSharp.CoreProcessor
                     notificationEntity.Status = (int)PushNotificationStatus.Error;
                     notificationEntity.ModifiedAt = DateTime.Now;
                     notificationEntity.Description = "(Processor) Unsupported device OS: " + notificationEntity.MobileDevice.SmartphonePlatform;
+                    SimpleErrorLogger.LogError(new Exception("EX. ERROR: " + notificationEntity.Description));
+                    messagePushed = false;
                 }
 
                 try
                 {
                     // Save changes to DB to keep the correct state of messages
                     _databaseContext.SaveChanges();
+
+                    // bubble out the single push error, else return true to continue iteration
+                    if (_isDirectSinglePush)
+                        return messagePushed;
+
                     return true;
                 }
                 catch (Exception ex)
                 {
                     On(DisplayErrorMessage, "EX. ERROR: Updating notification, DB save failed: " + ex.Message);
-                    SimpleErrorLogger.Log(ex);
-                    return false;
+                    SimpleErrorLogger.LogError(ex);
+
+                    // bubble out the single push error, else return true to continue iteration
+                    if (_isDirectSinglePush)
+                        return false;
+
+                    return true;
+                }
+                finally
+                {
+                    if (_isDirectSinglePush)
+                        KillBroker(_databaseContext);
                 }
             }
             else
@@ -364,7 +388,7 @@ namespace PushSharp.CoreProcessor
             catch (Exception ex)
             {
                 On(DisplayErrorMessage, "EX. ERROR: Enqueuing notification, DB save failed: " + ex.Message);
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
                 return false;
             }
         }
@@ -391,7 +415,7 @@ namespace PushSharp.CoreProcessor
             catch (Exception ex)
             {
                 On(DisplayErrorMessage, "EX. ERROR: Enqueuing notification, DB save failed: " + ex.Message);
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
                 return false;
             }
         }
@@ -438,7 +462,7 @@ namespace PushSharp.CoreProcessor
             catch (Exception ex)
             {
                 On(DisplayErrorMessage, "EX. ERROR: Get notification from DB: " + ex.Message);
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
             }
             finally
             {
@@ -455,8 +479,10 @@ namespace PushSharp.CoreProcessor
         private void broker_OnServiceException(object sender, Exception error)
         {
             On(DisplayErrorMessage, "Push Notification service failure!");
-            SimpleErrorLogger.Log(error);
+            SimpleErrorLogger.LogError(error);
         }
+
+        private object _onNotificationFailedLocker = new Object();
 
         /// <summary>
         /// This one will fail if your APNS, GCM and WIN registration data is not correct, also if a notification is malformed.
@@ -479,24 +505,38 @@ namespace PushSharp.CoreProcessor
                     _databaseContext.SaveChanges();
                 }
                 else
-                {
                     On(DisplayErrorMessage, "ERROR: The failed notification " + notificationEntity.ID + " not found in database!");
-                }
+
+                TryKillingTheImmediatePushBroker();
             }
             catch (Exception ex)
             {
                 On(DisplayErrorMessage, "Notification failed handler failed hard! :-)");
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
             }
 
             On(DisplayErrorMessage, "Notification failed!");
-            SimpleErrorLogger.Log(error);
+            SimpleErrorLogger.LogError(error);
+        }
+
+        /// <summary>
+        /// Counts down the killer counter when a list of notifications is broadcasted. Whne countdown is over kills the broker.
+        /// </summary>
+        private void TryKillingTheImmediatePushBroker()
+        {
+            if (!_isDirectSinglePush)
+            {
+                if (_immediatePushCounter == 0)
+                    KillBroker(_databaseContext);
+                else
+                    _immediatePushCounter--;
+            }
         }
 
         private void broker_OnChannelException(object sender, IPushChannel pushChannel, Exception error)
         {
             On(DisplayErrorMessage, "Channel exception!");
-            SimpleErrorLogger.Log(error);
+            SimpleErrorLogger.LogError(error);
         }
 
         private void broker_OnChannelDestroyed(object sender)
@@ -511,7 +551,7 @@ namespace PushSharp.CoreProcessor
 
         private void broker_OnDeviceSubscriptionChanged(object sender, string oldSubscriptionId, string newSubscriptionId, INotification notification)
         {
-            On(DisplayMessage, "Device subscription changed!");
+            On(DisplayMessage, "Device subscription changed! Old: " + oldSubscriptionId + " - New: " + newSubscriptionId);
         }
 
         private void broker_OnNotificationRequeue(object sender, NotificationRequeueEventArgs e)

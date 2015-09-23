@@ -63,7 +63,7 @@ namespace PushSharp.WebAPI.Filters
             }
             catch (Exception ex)
             {
-                SimpleErrorLogger.Log(ex);
+                SimpleErrorLogger.LogError(ex);
                 return false;
             }
         }

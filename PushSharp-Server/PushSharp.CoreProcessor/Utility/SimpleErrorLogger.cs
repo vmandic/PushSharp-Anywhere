@@ -7,7 +7,7 @@ namespace PushSharp.CoreProcessor.Utility
     {
         private readonly static object _locker = new Object();
 
-        public static void Log(Exception _ex, bool isInnerException = false)
+        public static void LogError(Exception _ex, bool isInnerException = false)
         {
             // do it thread safe, not in a hurry, let the others sleep!
             lock (_locker)
@@ -31,13 +31,18 @@ namespace PushSharp.CoreProcessor.Utility
                     }
 
                     if (_ex.InnerException != null)
-                        Log(_ex.InnerException, true);
+                        LogError(_ex.InnerException, true);
                 }
                 catch (Exception ex)
                 {
                     //the uncatchable :-(
                 }
             }
+        }
+
+        public static void Trace(string msg)
+        {
+            System.Diagnostics.Trace.WriteLine("TRACE [" + DateTime.Now.ToLongTimeString() + "]: " + msg);
         }
 
         private static string FormatEx(Exception ex)
