@@ -1,4 +1,4 @@
-DevUG-PushSharp
+PushSharp-Anywhere
 ===============
 
 This project demonstrates the usage/implementation of the PushSharp .NET SDK for simple and efficient management of multiplatform (IOS, Android and Windows Phone) Push Notification services on the server side. 
