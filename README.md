@@ -21,5 +21,5 @@ This project was built for a show case on the mscommunity.hr standup/meetup in Z
 
 Update 23.9.2015.
 ===============
-Project is currently in update for the conference MobilityDay 2015 showcase.
+Project was updated for the conference MobilityDay 2015 showcase. Take care when loading the Android app, needs gradle reconfiguration.
 
