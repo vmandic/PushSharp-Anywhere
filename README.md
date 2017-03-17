@@ -1,6 +1,6 @@
 Warning notice
 ===============
-This project has not been updated for a long time, proceed with caution and give starts to <a href="https://github.com/redth">@redth</a> for making this amazing library. :)
+This project has not been updated for a long time, proceed with caution and **give stars 🌟 to <a href="https://github.com/redth">@redth</a> for making this amazing library**. :)
 
 PushSharp-Anywhere
 ===============
